@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sudoku</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root, [data-theme="classic"]{
+  --bg:#ffffff; --surface:#ffffff; --text:#344861; --muted:#94a3b7;
+  --thick:#344861; --thin:#bec6d4; --cell:#ffffff;
+  --given:#344861; --user:#325aaf; --error:#e55c6c; --error-bg:#f7cfd6;
+  --sel:#bbdefb; --hl:#e2ebf3; --same:#c3d7ea;
+  --accent:#5a7bc0; --accent-text:#ffffff; --btn:#eaeef4; --btn-hover:#dce3ed;
+  --num:#325aaf; --shadow:rgba(52,72,97,.18);
+}
+[data-theme="dark"]{
+  --bg:#14161b; --surface:#1d2129; --text:#dbe2ee; --muted:#7d889b;
+  --thick:#8a97ad; --thin:#363d4a; --cell:#1d2129;
+  --given:#dbe2ee; --user:#7fb0ff; --error:#ff6b7d; --error-bg:#4a2430;
+  --sel:#2f4a72; --hl:#252b36; --same:#334562;
+  --accent:#5b8def; --accent-text:#ffffff; --btn:#262b35; --btn-hover:#303746;
+  --num:#7fb0ff; --shadow:rgba(0,0,0,.5);
+}
+[data-theme="sepia"]{
+  --bg:#f4ecd8; --surface:#fbf5e6; --text:#5b4636; --muted:#a08b70;
+  --thick:#5b4636; --thin:#d3c5a3; --cell:#fbf5e6;
+  --given:#5b4636; --user:#9a5f22; --error:#c0392b; --error-bg:#f2c9bf;
+  --sel:#ecd59f; --hl:#f1e5c6; --same:#e4cf9c;
+  --accent:#a0703c; --accent-text:#fffaf0; --btn:#ece0c3; --btn-hover:#e3d4b0;
+  --num:#9a5f22; --shadow:rgba(91,70,54,.2);
+}
+[data-theme="violet"]{
+  --bg:#17112b; --surface:#21183a; --text:#e8defc; --muted:#8f80b3;
+  --thick:#9d7bea; --thin:#3b2e5c; --cell:#21183a;
+  --given:#e8defc; --user:#c9a6ff; --error:#ff5c8a; --error-bg:#5a1f3b;
+  --sel:#4a3380; --hl:#2b2049; --same:#3d2c6b;
+  --accent:#9d7bea; --accent-text:#ffffff; --btn:#2a2046; --btn-hover:#352a58;
+  --num:#c9a6ff; --shadow:rgba(0,0,0,.55);
+}
+[data-theme="mint"]{
+  --bg:#eef6f2; --surface:#ffffff; --text:#2d4a3e; --muted:#86a397;
+  --thick:#2d4a3e; --thin:#bfd6cb; --cell:#ffffff;
+  --given:#2d4a3e; --user:#1f8a5c; --error:#d9534f; --error-bg:#f6d2d0;
+  --sel:#bfe8d3; --hl:#e3f1ea; --same:#c7e3d4;
+  --accent:#2f9e6e; --accent-text:#ffffff; --btn:#e0eee7; --btn-hover:#d0e5da;
+  --num:#1f8a5c; --shadow:rgba(45,74,62,.18);
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--text);font-family:'Rubik',system-ui,sans-serif;transition:background .25s,color .25s}
+body{min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:18px 14px 40px}
+button{font-family:inherit;color:inherit;cursor:pointer;border:none;background:none}
+
+/* ---------- Header ---------- */
+header{width:100%;max-width:960px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.logo{display:flex;align-items:center;gap:10px;font-size:26px;font-weight:500;letter-spacing:.3px}
+.logo-mark{width:34px;height:34px;display:grid;grid-template-columns:repeat(3,1fr);gap:2px;padding:3px;border:2px solid var(--thick);border-radius:6px}
+.logo-mark i{background:var(--accent);border-radius:1px;opacity:.25}
+.logo-mark i:nth-child(1),.logo-mark i:nth-child(5),.logo-mark i:nth-child(9){opacity:1}
+.themes{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.swatch{width:26px;height:26px;border-radius:50%;border:2px solid transparent;outline:2px solid transparent;transition:transform .15s,outline-color .15s;position:relative;overflow:hidden}
+.swatch:hover{transform:scale(1.1)}
+.swatch.active{outline-color:var(--accent);outline-offset:2px}
+.swatch span{position:absolute;inset:0}
+.swatch span:last-child{clip-path:polygon(100% 0,100% 100%,0 100%)}
+
+.themes{position:relative}
+.swatch.add{display:grid;place-items:center;background:var(--btn);border:2px dashed var(--muted)!important;color:var(--muted);font-size:17px;line-height:1;font-weight:500}
+.swatch.add:hover{color:var(--accent);border-color:var(--accent)!important}
+
+/* ---------- Custom theme panel ---------- */
+.cpanel{position:absolute;top:calc(100% + 12px);right:0;width:310px;background:var(--surface);color:var(--text);border:1px solid var(--thin);border-radius:14px;box-shadow:0 18px 44px var(--shadow);padding:16px 16px 14px;z-index:40;display:none}
+.cpanel.show{display:block;animation:rise .2s ease}
+.cpanel h3{font-size:15.5px;font-weight:500;margin-bottom:4px}
+.cpanel .sub{font-size:12.5px;color:var(--muted);margin-bottom:12px}
+.cpanel .base{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;margin-bottom:8px;padding-bottom:10px;border-bottom:1px solid var(--thin)}
+.cpanel select{font-family:inherit;font-size:13px;padding:5px 8px;border-radius:6px;border:1px solid var(--thin);background:var(--btn);color:var(--text)}
+.cfield{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:4px 0;font-size:13px}
+.cfield .pick{display:flex;align-items:center;gap:8px}
+.cfield code{font-size:11px;color:var(--muted);font-family:ui-monospace,monospace;width:56px;text-align:right}
+.cfield input[type=color]{width:38px;height:28px;border:1px solid var(--thin);border-radius:7px;background:var(--btn);padding:2px;cursor:pointer}
+.cpanel .acts{display:flex;gap:8px;margin-top:12px}
+.cpanel .acts button{flex:1;padding:9px 6px;border-radius:7px;background:var(--btn);font-size:13.5px;font-weight:500}
+.cpanel .acts button:hover{background:var(--btn-hover)}
+.cpanel .acts .primary{background:var(--accent);color:var(--accent-text)}
+.cpanel .acts .danger{color:var(--error)}
+
+/* ---------- Difficulty bar ---------- */
+.diffbar{width:100%;max-width:960px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:14px;color:var(--muted);margin-bottom:10px}
+.diffbar button{padding:6px 10px;border-radius:6px;color:var(--muted);font-size:14px;transition:color .15s,background .15s}
+.diffbar button:hover{color:var(--text);background:var(--btn)}
+.diffbar button.active{color:var(--accent);font-weight:600}
+
+/* ---------- Main layout ---------- */
+main{width:100%;max-width:960px;display:flex;gap:34px;align-items:flex-start;justify-content:center}
+.left{flex:0 1 520px;min-width:0}
+.right{flex:0 0 300px;display:flex;flex-direction:column;gap:16px}
+
+.stats{display:flex;justify-content:space-between;align-items:center;font-size:14px;color:var(--muted);margin-bottom:8px;padding:0 2px}
+.stats b{color:var(--text);font-weight:500}
+.stats .mistakes.bad b{color:var(--error)}
+.timer{display:flex;align-items:center;gap:8px}
+.pausebtn{width:28px;height:28px;border-radius:50%;background:var(--btn);display:grid;place-items:center;transition:background .15s}
+.pausebtn:hover{background:var(--btn-hover)}
+.pausebtn svg{width:12px;height:12px;fill:var(--muted)}
+
+/* ---------- Board ---------- */
+.board-wrap{position:relative;container-type:inline-size}
+.board{display:grid;grid-template-columns:repeat(9,1fr);grid-template-rows:repeat(9,1fr);aspect-ratio:1;width:100%;border:2px solid var(--thick);background:var(--cell);user-select:none;-webkit-user-select:none;border-radius:2px;outline:none}
+.cell{position:relative;display:flex;align-items:center;justify-content:center;border-right:1px solid var(--thin);border-bottom:1px solid var(--thin);background:var(--cell);font-size:6.4cqi;font-weight:400;cursor:pointer;transition:background .12s}
+.cell.br{border-right:2px solid var(--thick)}
+.cell.bb{border-bottom:2px solid var(--thick)}
+.cell.c8{border-right:none}
+.cell.r8{border-bottom:none}
+.cell.hl{background:var(--hl)}
+.cell.same{background:var(--same)}
+.cell.conflict{background:var(--error-bg)}
+.cell.sel{background:var(--sel)}
+.cell .v{line-height:1}
+.cell .v.given{color:var(--given)}
+.cell .v.user{color:var(--user)}
+.cell .v.err{color:var(--error)}
+.cell.pop .v{animation:pop .28s ease}
+@keyframes pop{0%{transform:scale(.4);opacity:.2}70%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
+.cell.wave{animation:wave .6s ease}
+@keyframes wave{0%{background:var(--cell)}40%{background:var(--same)}100%{background:inherit}}
+.notes{position:absolute;inset:2px;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr)}
+.notes span{display:flex;align-items:center;justify-content:center;font-size:2.4cqi;color:var(--muted);line-height:1;border-radius:3px}
+.notes span.match{color:var(--accent-text);background:var(--accent);font-weight:600}
+
+/* Kursor: miękka, półprzezroczysta nakładka płynnie przeskakująca między polami */
+.cursor{position:absolute;left:0;top:0;pointer-events:none;z-index:3;border-radius:8px;
+  border:2.5px solid var(--accent);
+  background:color-mix(in srgb,var(--accent) 17%,transparent);
+  box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 22%,transparent),0 6px 18px var(--shadow);
+  transition:transform .22s cubic-bezier(.25,1.35,.5,1),width .2s,height .2s,opacity .18s,border-color .2s;opacity:0}
+.cursor.show{opacity:1}
+.cursor.instant{transition:none}
+.cursor::after{content:'';position:absolute;inset:-3px;border-radius:10px;border:2px solid var(--accent);animation:breathe 2s ease-in-out infinite}
+@keyframes breathe{0%,100%{transform:scale(1);opacity:.5}55%{transform:scale(1.13);opacity:0}}
+.cursor.notes-on{border-style:dashed}
+.cursor.notes-on::before{content:'';position:absolute;right:-7px;top:-7px;width:16px;height:16px;border-radius:50%;background:var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z'/%3E%3C/svg%3E") center/10px no-repeat}
+
+.overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;background:var(--cell);border:2px solid var(--thick);border-radius:2px;z-index:5}
+.overlay.show{display:flex}
+.playbig{width:72px;height:72px;border-radius:50%;background:var(--accent);display:grid;place-items:center;box-shadow:0 6px 18px var(--shadow);transition:transform .15s}
+.playbig:hover{transform:scale(1.06)}
+.playbig svg{width:28px;height:28px;fill:var(--accent-text);margin-left:4px}
+
+/* ---------- Controls ---------- */
+.tools{display:flex;justify-content:space-between;gap:8px}
+.tool{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+.tool .ic{position:relative;width:56px;height:56px;border-radius:50%;background:var(--btn);display:grid;place-items:center;transition:background .15s,transform .1s}
+.tool:hover .ic{background:var(--btn-hover)}
+.tool:active .ic{transform:scale(.94)}
+.tool svg{width:24px;height:24px;fill:none;stroke:var(--num);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.badge{position:absolute;top:-4px;right:-6px;min-width:28px;height:20px;padding:0 6px;border-radius:10px;background:var(--muted);color:var(--surface);font-size:11px;font-weight:600;display:grid;place-items:center;border:2px solid var(--bg)}
+.tool.on .badge{background:var(--accent);color:var(--accent-text)}
+.tool.on .ic{background:var(--sel)}
+
+.numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.num{aspect-ratio:1/1.05;border-radius:8px;background:var(--btn);color:var(--num);font-size:34px;font-weight:300;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:background .15s,transform .08s,opacity .2s;position:relative}
+.num:hover{background:var(--btn-hover)}
+.num:active{transform:scale(.95)}
+.num small{position:absolute;bottom:6px;font-size:11px;color:var(--muted);font-weight:400}
+.num.done{opacity:0;pointer-events:none}
+.numpad.notes-mode .num{font-size:24px;color:var(--muted)}
+
+.newgame{width:100%;padding:16px;border-radius:8px;background:var(--accent);color:var(--accent-text);font-size:17px;font-weight:500;box-shadow:0 4px 14px var(--shadow);transition:filter .15s,transform .1s}
+.newgame:hover{filter:brightness(1.07)}
+.newgame:active{transform:scale(.98)}
+
+
+/* ---------- Modal ---------- */
+.modal-bg{position:fixed;inset:0;background:rgba(10,14,22,.45);display:none;align-items:center;justify-content:center;z-index:50;padding:20px;backdrop-filter:blur(2px)}
+.modal-bg.show{display:flex}
+.modal{background:var(--surface);color:var(--text);border-radius:14px;padding:28px 26px 22px;width:100%;max-width:360px;text-align:center;box-shadow:0 20px 50px var(--shadow);animation:rise .25s ease}
+@keyframes rise{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
+.modal h2{font-size:22px;font-weight:500;margin-bottom:8px}
+.modal p{color:var(--muted);font-size:14.5px;line-height:1.5;margin-bottom:18px}
+.modal .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px}
+.modal .grid div{background:var(--btn);border-radius:8px;padding:10px 4px;font-size:12px;color:var(--muted)}
+.modal .grid b{display:block;font-size:18px;color:var(--text);font-weight:500;margin-top:2px}
+.modal .btns{display:flex;flex-direction:column;gap:8px}
+.modal .btns button{padding:13px;border-radius:8px;font-size:15px;font-weight:500;background:var(--btn)}
+.modal .btns button.primary{background:var(--accent);color:var(--accent-text)}
+.modal .btns button:hover{filter:brightness(1.05)}
+
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:var(--text);color:var(--bg);padding:9px 16px;border-radius:20px;font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:60}
+.toast.show{opacity:1;transform:translateX(-50%)}
+
+
+/* ---------- Skróty pod ? ---------- */
+.keys{font-size:13px;color:var(--muted);line-height:2;text-align:left;margin-bottom:16px}
+.keys kbd{display:inline-block;min-width:22px;padding:0 6px;border-radius:4px;background:var(--btn);color:var(--text);border:1px solid var(--thin);border-bottom-width:2px;font-family:inherit;font-size:11.5px;text-align:center;line-height:18px}
+.keys .row{display:flex;justify-content:space-between;gap:12px}
+.modal.wide{max-width:430px}
+.keys-btn{position:fixed;right:18px;bottom:18px;width:40px;height:40px;border-radius:50%;background:var(--btn);color:var(--muted);font-size:18px;font-weight:600;box-shadow:0 3px 10px var(--shadow);z-index:30;transition:background .15s,color .15s,transform .15s}
+.keys-btn:hover{background:var(--btn-hover);color:var(--accent);transform:scale(1.06)}
+
+/* ---------- Pasek boczny ---------- */
+.dock{position:fixed;left:0;top:0;bottom:0;width:12px;z-index:70;display:flex;align-items:center;justify-content:center;cursor:pointer;background:color-mix(in srgb,var(--accent) 9%,transparent);border-right:1px solid var(--thin);transition:width .2s,background .2s;touch-action:none}
+.dock:hover{width:18px;background:color-mix(in srgb,var(--accent) 20%,transparent)}
+.dock .grip{width:4px;height:52px;border-radius:3px;background:var(--accent);opacity:.65}
+.side-scrim{position:fixed;inset:0;background:rgba(10,14,22,.32);opacity:0;pointer-events:none;transition:opacity .3s;z-index:75}
+.side-scrim.show{opacity:1;pointer-events:auto}
+.side{position:fixed;left:0;top:0;bottom:0;width:350px;max-width:90vw;background:var(--surface);color:var(--text);border-right:1px solid var(--thin);box-shadow:10px 0 34px var(--shadow);z-index:80;transform:translateX(-102%);transition:transform .34s cubic-bezier(.2,.9,.3,1),width .3s ease;display:flex;flex-direction:column}
+.side.open{transform:none}
+.side.dragging{transition:none}
+.side.wide{width:min(820px,94vw)}
+.side-head{display:flex;align-items:center;gap:12px;padding:20px 18px 14px;border-bottom:1px solid var(--thin)}
+.avatar{width:42px;height:42px;border-radius:50%;background:var(--accent);color:var(--accent-text);display:grid;place-items:center;font-weight:600;font-size:17px;flex:none}
+.who-box{flex:1;min-width:0}
+.who{font-weight:500;font-size:15.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.who-sub{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.side-x{width:32px;height:32px;border-radius:50%;font-size:22px;color:var(--muted);line-height:1}
+.side-x:hover{background:var(--btn)}
+.side-tabs{display:flex;gap:4px;padding:10px 12px;border-bottom:1px solid var(--thin);flex-wrap:wrap}
+.side-tabs button{padding:8px 12px;border-radius:8px;font-size:13.5px;color:var(--muted);transition:background .15s,color .15s}
+.side-tabs button:hover{background:var(--btn);color:var(--text)}
+.side-tabs button.active{background:var(--sel);color:var(--text);font-weight:500}
+.side-tabs button.admin{color:var(--accent)}
+.side-body{flex:1;overflow:auto;padding:18px}
+.side-body h4{font-size:15px;font-weight:500;margin-bottom:6px}
+.side-body p{font-size:13.5px;color:var(--muted);line-height:1.55;margin-bottom:14px}
+.side-body label.f{display:block;font-size:12.5px;color:var(--muted);margin:0 0 5px}
+.side-body input[type=text]{width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--thin);background:var(--cell);color:var(--text);font-family:inherit;font-size:14px;margin-bottom:12px;outline:none}
+.side-body input[type=text]:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)}
+.side-body input[readonly]{opacity:.75}
+.sbtn{width:100%;padding:11px;border-radius:8px;background:var(--btn);font-size:14px;font-weight:500;margin-bottom:8px;transition:filter .15s,background .15s}
+.sbtn:hover{background:var(--btn-hover)}
+.sbtn.primary{background:var(--accent);color:var(--accent-text)}
+.sbtn.primary:hover{filter:brightness(1.07)}
+.sbtn.danger{color:var(--error)}
+.msg{font-size:13px;border-radius:8px;padding:9px 11px;margin-bottom:12px;background:var(--btn);color:var(--text)}
+.msg.err{background:var(--error-bg);color:var(--error)}
+.msg.ok{background:var(--sel)}
+.statgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.statgrid div{background:var(--btn);border-radius:8px;padding:9px 6px;text-align:center;font-size:11.5px;color:var(--muted)}
+.statgrid b{display:block;font-size:17px;color:var(--text);font-weight:500}
+.besttab{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px}
+.besttab td{padding:6px 2px;border-bottom:1px solid var(--thin)}
+.besttab td:last-child{text-align:right;color:var(--muted)}
+.opt{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--thin);font-size:13.5px;cursor:pointer}
+.opt small{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}
+.sw{position:relative;width:40px;height:23px;flex:none}
+.sw input{opacity:0;width:0;height:0;position:absolute}
+.sw span{position:absolute;inset:0;border-radius:12px;background:var(--thin);transition:background .2s}
+.sw span::after{content:'';position:absolute;left:3px;top:3px;width:17px;height:17px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s}
+.sw input:checked+span{background:var(--accent)}
+.sw input:checked+span::after{transform:translateX(17px)}
+.themechips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 18px}
+.themechips button{padding:7px 11px;border-radius:16px;background:var(--btn);font-size:12.5px;display:flex;align-items:center;gap:6px}
+.themechips button i{width:12px;height:12px;border-radius:50%;display:inline-block;border:1px solid var(--thin)}
+.themechips button.active{background:var(--sel);font-weight:500}
+.atable{width:100%;border-collapse:collapse;font-size:13px}
+.atable th{text-align:left;font-weight:500;color:var(--muted);font-size:12px;padding:8px 6px;border-bottom:2px solid var(--thin);white-space:nowrap}
+.atable td{padding:9px 6px;border-bottom:1px solid var(--thin);vertical-align:top}
+.atable td.em{color:var(--muted);word-break:break-all}
+.atable .tag{display:inline-block;font-size:10.5px;padding:1px 6px;border-radius:8px;background:var(--accent);color:var(--accent-text);margin-left:4px;vertical-align:1px}
+.atable button{font-size:12px;padding:5px 9px;border-radius:6px;background:var(--btn);color:var(--error)}
+.atable button:hover{background:var(--error-bg)}
+.idcard{display:flex;gap:11px;align-items:flex-start;background:var(--btn);border:1px solid var(--thin);border-radius:10px;padding:11px 12px;margin-bottom:14px}
+.idcard svg{width:20px;height:20px;flex:none;fill:none;stroke:var(--accent);stroke-width:2;stroke-linecap:round;margin-top:1px}
+.idcard b{display:block;font-weight:500;font-size:14px;word-break:break-all}
+.idcard span{display:block;font-size:12px;color:var(--muted);margin-top:2px;line-height:1.45}
+.rolebadge{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:9px;background:var(--accent);color:var(--accent-text);margin-left:6px;vertical-align:2px}
+.atable .det{font-size:11.5px;color:var(--muted);line-height:1.6}
+.asearch{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+.asearch input{margin-bottom:0!important}
+.asum{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+.asum div{background:var(--btn);border-radius:8px;padding:9px 6px;text-align:center;font-size:11.5px;color:var(--muted)}
+.asum b{display:block;font-size:17px;color:var(--text);font-weight:500}
+
+/* Opcje: wyłączenia */
+body.no-anim .cursor{transition:opacity .18s}
+body.no-anim .cursor::after{display:none}
+body.no-counts .num small{display:none}
+body.focus .dock, body.focus .keys-btn{display:none}
+/* ---------- Tryb skupienia (F) ---------- */
+body.focus{justify-content:center;padding:12px}
+body.focus header, body.focus .diffbar, body.focus .right, body.focus .pausebtn{display:none}
+body.focus main{flex:1;max-width:none;align-items:center;justify-content:center}
+body.focus .left{flex:none;width:min(94vw, calc(100vh - 72px))}
+body.focus .stats{font-size:17px;margin-bottom:12px;padding:0 4px}
+body.focus .board{border-width:3px}
+::view-transition-old(root), ::view-transition-new(root){animation-duration:.35s}
+
+@media (max-width:820px){
+  main{flex-direction:column;align-items:center;gap:18px}
+  .left{width:100%;max-width:520px;flex:none}
+  .right{width:100%;max-width:520px;flex:none}
+  .numpad{grid-template-columns:repeat(9,1fr);gap:4px}
+  .num{aspect-ratio:auto;height:58px;font-size:28px}
+  .num small{display:none}
+}
+</style>
+</head>
+<body data-theme="classic">
+
+<header>
+  <div class="logo"><div class="logo-mark"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>Sudoku</div>
+  <div class="themes" id="themes">
+    <span>Motyw:</span>
+    <div id="swatches" style="display:flex;gap:8px;align-items:center"></div>
+    <div class="cpanel" id="cpanel">
+      <h3>Własny motyw</h3>
+      <div class="sub">Zmiany widzisz od razu na planszy.</div>
+      <div class="base"><span>Zacznij od:</span><select id="baseSel"></select></div>
+      <div id="cfields"></div>
+      <div class="acts">
+        <button id="cCancel">Anuluj</button>
+        <button id="cDelete" class="danger">Usuń</button>
+        <button id="cSave" class="primary">Zapisz</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="diffbar" id="diffbar">
+  <span>Poziom trudności:</span>
+</div>
+
+<main>
+  <section class="left">
+    <div class="stats">
+      <div class="mistakes" id="mistakesBox">Błędy: <b id="mistakes">0/3</b></div>
+      <div>Wynik: <b id="score">0</b></div>
+      <div class="timer"><b id="time">00:00</b>
+        <button class="pausebtn" id="pauseBtn" title="Pauza (P)" aria-label="Pauza">
+          <svg id="pauseIc" viewBox="0 0 12 12"><rect x="2" y="1" width="3" height="10" rx="1"/><rect x="7" y="1" width="3" height="10" rx="1"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="board-wrap">
+      <div class="board" id="board" tabindex="0" aria-label="Plansza sudoku"></div>
+      <div class="cursor" id="cursor"></div>
+      <div class="overlay" id="pauseOverlay">
+        <button class="playbig" id="resumeBtn" aria-label="Wznów"><svg viewBox="0 0 24 24"><path d="M6 3l15 9-15 9z"/></svg></button>
+        <div style="color:var(--muted);font-size:14px">Gra wstrzymana</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="right">
+    <div class="tools">
+      <button class="tool" id="undoBtn" title="Cofnij (Ctrl+Z)"><span class="ic"><svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 010 10h-3"/></svg></span>Cofnij</button>
+      <button class="tool" id="eraseBtn" title="Wymaż (Backspace)"><span class="ic"><svg viewBox="0 0 24 24"><path d="M20 20H9L4 15a2 2 0 010-3l9-9a2 2 0 013 0l5 5a2 2 0 010 3l-8 9"/><path d="M8 9l7 7"/></svg></span>Wymaż</button>
+      <button class="tool" id="notesBtn" title="Notatki (Spacja)"><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg><span class="badge" id="notesBadge">OFF</span></span>Notatki</button>
+      <button class="tool" id="hintBtn" title="Podpowiedź (H)"><span class="ic"><svg viewBox="0 0 24 24"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 00-4 12.7V16h8v-1.3A7 7 0 0012 2z"/></svg><span class="badge" id="hintBadge">3</span></span>Podpowiedź</button>
+    </div>
+    <div class="numpad" id="numpad"></div>
+    <button class="newgame" id="newBtn">Nowa gra</button>
+  </section>
+</main>
+
+<div class="modal-bg" id="modalBg"><div class="modal" id="modal"></div></div>
+<div class="toast" id="toast"></div>
+
+<!-- Skróty klawiszowe (pod ?) -->
+<template id="keysTpl"><div class="keys">
+<div class="row"><span><kbd>←</kbd> <kbd>↑</kbd> <kbd>→</kbd> <kbd>↓</kbd></span><span>ruch po planszy</span></div>
+<div class="row"><span><kbd>1</kbd>–<kbd>9</kbd></span><span>wpisz cyfrę</span></div>
+<div class="row"><span><kbd>Spacja</kbd></span><span>ołówek (notatki) ON/OFF</span></div>
+<div class="row"><span><kbd>Shift</kbd>+<kbd>1</kbd>–<kbd>9</kbd></span><span>szybka notatka</span></div>
+<div class="row"><span><kbd>Backspace</kbd> / <kbd>Del</kbd></span><span>wymaż</span></div>
+<div class="row"><span><kbd>Ctrl</kbd>+<kbd>Z</kbd></span><span>cofnij</span></div>
+<div class="row"><span><kbd>H</kbd></span><span>podpowiedź</span></div>
+<div class="row"><span><kbd>P</kbd></span><span>pauza / wznów</span></div>
+<div class="row"><span><kbd>T</kbd></span><span>następny motyw</span></div>
+<div class="row"><span><kbd>N</kbd></span><span>nowa gra</span></div>
+<div class="row"><span><kbd>F</kbd></span><span>tryb skupienia (duża plansza)</span></div>
+<div class="row"><span><kbd>M</kbd></span><span>menu (pasek z lewej)</span></div>
+<div class="row"><span><kbd>?</kbd></span><span>pokaż / ukryj skróty</span></div>
+</div></template>
+<button class="keys-btn" id="keysBtn" title="Skróty klawiszowe (?)" aria-label="Skróty klawiszowe">?</button>
+
+<!-- Wysuwany pasek z lewej -->
+<div class="dock" id="dock" title="Menu (M)"><div class="grip"></div></div>
+<div class="side-scrim" id="scrim"></div>
+<aside class="side" id="side" aria-label="Menu">
+  <div class="side-head">
+    <div class="avatar" id="avatar">?</div>
+    <div class="who-box"><div class="who" id="who">Niezalogowany</div><div class="who-sub" id="whoSub">Konto Sudoku</div></div>
+    <button class="side-x" id="sideClose" aria-label="Zamknij menu">×</button>
+  </div>
+  <nav class="side-tabs" id="sideTabs"></nav>
+  <div class="side-body" id="sideBody"></div>
+</aside>
+
+<script>
+(() => {
+/* ================= Konfiguracja ================= */
+const DIFFS = {
+  easy:   {name:'Łatwy',   clues:40, pts:30},
+  medium: {name:'Średni',  clues:33, pts:60},
+  hard:   {name:'Trudny',  clues:28, pts:90},
+  expert: {name:'Ekspert', clues:24, pts:120},
+  master: {name:'Mistrz', clues:22, pts:150, tries:8},
+  extreme:{name:'Ekstremalny', clues:17, pts:200, tries:50, byNodes:true},
+};
+const THEMES = [
+  {id:'classic', name:'Klasyczny', a:'#ffffff', b:'#5a7bc0'},
+  {id:'dark',    name:'Ciemny',    a:'#14161b', b:'#5b8def'},
+  {id:'sepia',   name:'Sepia',     a:'#f4ecd8', b:'#a0703c'},
+  {id:'mint',    name:'Miętowy',   a:'#eef6f2', b:'#2f9e6e'},
+  {id:'violet',  name:'Fioletowy', a:'#17112b', b:'#9d7bea'},
+];
+const MAX_MISTAKES = 3, MAX_HINTS = 3;
+const SET_DEFAULTS = {hl:true, same:true, autoClear:true, limit:true, anim:true, counts:true};
+let SET = SET_DEFAULTS;
+
+/* ================= Pomocnicze ================= */
+const $ = id => document.getElementById(id);
+const rowOf = i => (i/9)|0, colOf = i => i%9, boxOf = i => ((rowOf(i)/3)|0)*3 + ((colOf(i)/3)|0);
+const PEERS = [];
+for (let i=0;i<81;i++){
+  const s = new Set();
+  for (let j=0;j<81;j++) if (j!==i && (rowOf(j)===rowOf(i)||colOf(j)===colOf(i)||boxOf(j)===boxOf(i))) s.add(j);
+  PEERS.push([...s]);
+}
+const shuffle = a => { for (let i=a.length-1;i>0;i--){const j=(Math.random()*(i+1))|0;[a[i],a[j]]=[a[j],a[i]];} return a; };
+const store = {
+  get(k){ try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } },
+  set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+};
+
+/* ================= Solver / generator ================= */
+function solve(grid, limit, random){
+  const g = grid.slice(), R = Array(9).fill(0), C = Array(9).fill(0), B = Array(9).fill(0);
+  for (let i=0;i<81;i++) if (g[i]){ const b=1<<g[i]; R[rowOf(i)]|=b; C[colOf(i)]|=b; B[boxOf(i)]|=b; }
+  let count = 0, first = null, nodes = 0;
+  const digits = [1,2,3,4,5,6,7,8,9];
+  (function rec(){
+    if (count>=limit) return;
+    nodes++;
+    let best=-1, bestMask=0, bestN=10;
+    for (let i=0;i<81;i++){
+      if (g[i]) continue;
+      const m = ~(R[rowOf(i)]|C[colOf(i)]|B[boxOf(i)]) & 0x3FE;
+      let n=0, x=m; while(x){x&=x-1;n++;}
+      if (n<bestN){ bestN=n; best=i; bestMask=m; if(n<=1) break; }
+    }
+    if (best===-1){ count++; if(!first) first=g.slice(); return; }
+    if (bestN===0) return;
+    const r=rowOf(best), c=colOf(best), bx=boxOf(best);
+    const order = random ? shuffle(digits.slice()) : digits;
+    for (const d of order){
+      const b = 1<<d; if (!(bestMask&b)) continue;
+      g[best]=d; R[r]|=b; C[c]|=b; B[bx]|=b;
+      rec();
+      g[best]=0; R[r]&=~b; C[c]&=~b; B[bx]&=~b;
+      if (count>=limit) return;
+    }
+  })();
+  return {count, solution:first, nodes};
+}
+function generateOnce(target){
+  const solution = solve(Array(81).fill(0), 1, true).solution;
+  const puzzle = solution.slice();
+  let clues = 81;
+  for (const i of shuffle([...Array(81).keys()])){
+    if (clues <= target) break;
+    const keep = puzzle[i]; puzzle[i] = 0;
+    if (solve(puzzle, 2, false).count !== 1) puzzle[i] = keep; else clues--;
+  }
+  return {puzzle, solution, clues};
+}
+function generate(diff){
+  // Dla najtrudniejszych poziomów losujemy kilka plansz i bierzemy tę z najmniejszą liczbą
+  // podpowiedzi, a przy remisie tę, której rozwiązanie wymaga najwięcej przeszukiwania.
+  const D = DIFFS[diff], tries = D.tries || 1;
+  let best = null;
+  for (let t=0; t<tries; t++){
+    const g = generateOnce(D.clues);
+    if (tries > 1) g.nodes = solve(g.puzzle, 2, false).nodes;
+    const better = !best || (D.byNodes
+      ? (g.nodes > best.nodes || (g.nodes===best.nodes && g.clues < best.clues))
+      : (g.clues < best.clues || (g.clues===best.clues && g.nodes > best.nodes)));
+    if (better) best = g;
+  }
+  return best;
+}
+
+/* ================= Stan gry ================= */
+let S; // stan
+let history = [];
+let timerId = null;
+
+function newGame(diff){
+  diff = diff || (S && S.diff) || 'easy';
+  const {puzzle, solution} = generate(diff);
+  S = {
+    diff, puzzle, solution,
+    values: puzzle.slice(),
+    notes: Array(81).fill(0),
+    sel: puzzle.indexOf(0),
+    notesMode: false,
+    mistakes: 0, hints: MAX_HINTS, score: 0, time: 0,
+    paused: false, over: false, won: false,
+  };
+  history = [];
+  closeModal();
+  save(); renderAll(); startTimer();
+  accountEvent('start');
+  toast(`Nowa gra: ${DIFFS[diff].name}`);
+}
+
+function save(){ store.set('sudoku-game', S); }
+
+function load(){
+  const g = store.get('sudoku-game');
+  if (g && Array.isArray(g.values) && g.values.length===81 && !g.over && !g.won){
+    S = g; S.paused = false; return true;
+  }
+  return false;
+}
+
+/* ================= Logika ruchów ================= */
+const isGiven = i => S.puzzle[i] !== 0;
+const isCorrect = i => S.values[i] !== 0 && S.values[i] === S.solution[i];
+const locked = i => isGiven(i) || isCorrect(i);
+const canPlay = () => !S.paused && !S.over && !S.won;
+
+function snapshot(){
+  history.push({values:S.values.slice(), notes:S.notes.slice(), sel:S.sel});
+  if (history.length>200) history.shift();
+}
+
+function input(d, forceNote){
+  if (!canPlay() || S.sel<0) return;
+  const i = S.sel;
+  if (locked(i)) return;
+  if (S.notesMode || forceNote){
+    if (S.values[i]) return;
+    snapshot();
+    S.notes[i] ^= (1<<d);
+    afterMove(); return;
+  }
+  if (S.values[i] === d) return;
+  snapshot();
+  S.values[i] = d;
+  S.notes[i] = 0;
+  if (d === S.solution[i]){
+    if (SET.autoClear) for (const p of PEERS[i]) S.notes[p] &= ~(1<<d);
+    S.score += DIFFS[S.diff].pts;
+    afterMove(i, true);
+    checkGroups(i);
+    checkWin();
+  } else {
+    S.mistakes++;
+    afterMove(i, false);
+    if (SET.limit && S.mistakes >= MAX_MISTAKES){ S.over = true; save(); accountEvent('lose'); setTimeout(showGameOver, 350); }
+  }
+}
+
+function erase(){
+  if (!canPlay() || S.sel<0) return;
+  const i = S.sel;
+  if (locked(i) || (!S.values[i] && !S.notes[i])) return;
+  snapshot();
+  S.values[i] = 0; S.notes[i] = 0;
+  afterMove();
+}
+
+function undo(){
+  if (!canPlay() || !history.length) return;
+  const h = history.pop();
+  S.values = h.values; S.notes = h.notes; S.sel = h.sel;
+  afterMove();
+}
+
+function hint(){
+  if (!canPlay()) return;
+  if (S.hints <= 0){ toast('Brak podpowiedzi'); return; }
+  let i = S.sel;
+  if (i<0 || isCorrect(i) || isGiven(i)){
+    const empties = [...Array(81).keys()].filter(k => !isCorrect(k) && !isGiven(k));
+    if (!empties.length) return;
+    i = empties[(Math.random()*empties.length)|0];
+    S.sel = i;
+  }
+  snapshot();
+  const d = S.solution[i];
+  S.values[i] = d; S.notes[i] = 0;
+  for (const p of PEERS[i]) S.notes[p] &= ~(1<<d);
+  S.hints--;
+  afterMove(i, true);
+  checkGroups(i);
+  checkWin();
+}
+
+function toggleNotes(){
+  if (S.over || S.won) return;
+  S.notesMode = !S.notesMode; save(); renderTools();
+}
+
+function move(dr, dc){
+  if (S.paused) return;
+  let i = S.sel < 0 ? 40 : S.sel;
+  const r = (rowOf(i)+dr+9)%9, c = (colOf(i)+dc+9)%9;
+  S.sel = r*9+c; save(); renderBoard();
+}
+
+function afterMove(popIdx, ok){
+  save(); renderAll();
+  if (popIdx!=null && ok){ const el = cells[popIdx]; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
+}
+
+function checkGroups(i){
+  const groups = [
+    [...Array(9).keys()].map(c => rowOf(i)*9+c),
+    [...Array(9).keys()].map(r => r*9+colOf(i)),
+    [...Array(81).keys()].filter(k => boxOf(k)===boxOf(i)),
+  ];
+  groups.forEach(g => {
+    if (g.every(isCorrect)) g.forEach((k,n) => setTimeout(() => {
+      const el = cells[k]; el.classList.remove('wave'); void el.offsetWidth; el.classList.add('wave');
+    }, n*35));
+  });
+}
+
+function checkWin(){
+  for (let i=0;i<81;i++) if (S.values[i] !== S.solution[i]) return;
+  S.won = true; save(); stopTimer(); accountEvent('win');
+  [...Array(81).keys()].forEach(k => setTimeout(() => {
+    const el = cells[k]; el.classList.remove('wave'); void el.offsetWidth; el.classList.add('wave');
+  }, (rowOf(k)+colOf(k))*40));
+  setTimeout(showWin, 900);
+}
+
+/* ================= Timer ================= */
+function startTimer(){
+  stopTimer();
+  timerId = setInterval(() => {
+    if (!S.paused && !S.over && !S.won){ S.time++; renderStats(); if (S.time%5===0) save(); }
+  }, 1000);
+}
+function stopTimer(){ if (timerId) clearInterval(timerId); timerId = null; }
+const fmt = t => { const h=(t/3600)|0, m=((t%3600)/60)|0, s=t%60; const p=n=>String(n).padStart(2,'0'); return (h?h+':':'')+p(m)+':'+p(s); };
+
+function setPaused(p){
+  if (S.over || S.won) return;
+  S.paused = p; save(); renderAll();
+}
+
+/* ================= Render ================= */
+const board = $('board'), cells = [];
+for (let i=0;i<81;i++){
+  const el = document.createElement('div');
+  const r=rowOf(i), c=colOf(i);
+  el.className = 'cell' + (c%3===2 && c!==8 ? ' br':'') + (r%3===2 && r!==8 ? ' bb':'') + (c===8?' c8':'') + (r===8?' r8':'');
+  el.addEventListener('mousedown', e => { e.preventDefault(); if (S.paused) return; S.sel = i; save(); renderBoard(); board.focus(); });
+  board.appendChild(el); cells.push(el);
+}
+
+const numpad = $('numpad'), numBtns = [];
+for (let d=1; d<=9; d++){
+  const b = document.createElement('button');
+  b.className = 'num'; b.innerHTML = `${d}<small></small>`;
+  b.addEventListener('mousedown', e => e.preventDefault());
+  b.addEventListener('click', () => input(d, false));
+  numpad.appendChild(b); numBtns.push(b);
+}
+
+function renderBoard(){
+  const sel = S.sel, selVal = sel>=0 ? S.values[sel] : 0;
+  for (let i=0;i<81;i++){
+    const el = cells[i], v = S.values[i];
+    let cls = el.className.replace(/\s(sel|hl|same|conflict)\b/g,'');
+    if (sel>=0){
+      if (i===sel) cls += ' sel';
+      else if (SET.same && selVal && v===selVal) cls += (S.values[sel]!==S.solution[sel] ? ' conflict' : ' same');
+      else if (SET.hl && (rowOf(i)===rowOf(sel)||colOf(i)===colOf(sel)||boxOf(i)===boxOf(sel))) cls += ' hl';
+    }
+    el.className = cls;
+    let html = '';
+    if (v){
+      const kind = isGiven(i) ? 'given' : (v===S.solution[i] ? 'user' : 'err');
+      html = `<span class="v ${kind}">${v}</span>`;
+    } else if (S.notes[i]){
+      html = '<div class="notes">';
+      for (let d=1; d<=9; d++){
+        const on = S.notes[i] & (1<<d);
+        html += `<span class="${on && selVal===d && isCorrect(sel) ? 'match':''}">${on?d:''}</span>`;
+      }
+      html += '</div>';
+    }
+    if (el._h !== html){ el.innerHTML = html; el._h = html; }
+  }
+  $('pauseOverlay').classList.toggle('show', S.paused);
+  placeCursor();
+}
+
+const cursor = $('cursor'), wrap = board.parentElement;
+function placeCursor(instant){
+  if (!S || S.sel<0 || S.paused){ cursor.classList.remove('show'); return; }
+  const wr = wrap.getBoundingClientRect(), r = cells[S.sel].getBoundingClientRect(), p = 3;
+  if (instant || !cursor.classList.contains('show')){ cursor.classList.add('instant'); }
+  cursor.style.width  = (r.width  + p*2) + 'px';
+  cursor.style.height = (r.height + p*2) + 'px';
+  cursor.style.transform = `translate(${r.left - wr.left - p}px, ${r.top - wr.top - p}px)`;
+  cursor.classList.add('show');
+  if (cursor.classList.contains('instant')) requestAnimationFrame(() => requestAnimationFrame(() => cursor.classList.remove('instant')));
+}
+new ResizeObserver(() => placeCursor(true)).observe(board);
+
+function renderStats(){
+  $('mistakes').textContent = SET.limit ? `${S.mistakes}/${MAX_MISTAKES}` : `${S.mistakes}`;
+  $('mistakesBox').classList.toggle('bad', S.mistakes>0);
+  $('score').textContent = S.score;
+  $('time').textContent = fmt(S.time);
+  $('pauseIc').innerHTML = S.paused
+    ? '<path d="M3 1l8 5-8 5z"/>'
+    : '<rect x="2" y="1" width="3" height="10" rx="1"/><rect x="7" y="1" width="3" height="10" rx="1"/>';
+}
+
+function renderTools(){
+  $('notesBtn').classList.toggle('on', S.notesMode);
+  $('notesBadge').textContent = S.notesMode ? 'ON' : 'OFF';
+  $('hintBadge').textContent = S.hints;
+  numpad.classList.toggle('notes-mode', S.notesMode);
+  cursor.classList.toggle('notes-on', S.notesMode);
+  const counts = Array(10).fill(0);
+  for (let i=0;i<81;i++) if (isCorrect(i)) counts[S.values[i]]++;
+  numBtns.forEach((b,k) => {
+    b.classList.toggle('done', counts[k+1]>=9);
+    b.querySelector('small').textContent = 9-counts[k+1];
+  });
+  document.querySelectorAll('#diffbar button').forEach(b => b.classList.toggle('active', b.dataset.d===S.diff));
+}
+
+function renderAll(){ renderBoard(); renderStats(); renderTools(); }
+
+/* ================= Motywy i poziomy ================= */
+const CUSTOM_FIELDS = [
+  ['bg','Tło strony'], ['cell','Tło planszy'], ['thick','Grube linie'], ['thin','Cienkie linie'],
+  ['given','Cyfry startowe i tekst'], ['user','Twoje cyfry'], ['accent','Akcent i kursor'],
+  ['sel','Zaznaczone pole'], ['hl','Podświetlenie wiersza/kolumny'], ['error','Błędy'],
+];
+const VAR_KEYS = ['--bg','--surface','--text','--muted','--thick','--thin','--cell','--given','--user','--error','--error-bg','--sel','--hl','--same','--accent','--accent-text','--btn','--btn-hover','--num','--shadow'];
+let customTheme = store.get('sudoku-custom');
+
+function lum(hex){
+  const n = parseInt(hex.slice(1),16), c = [(n>>16)&255,(n>>8)&255,n&255].map(v => { v/=255; return v<=.03928 ? v/12.92 : Math.pow((v+.055)/1.055,2.4); });
+  return .2126*c[0] + .7152*c[1] + .0722*c[2];
+}
+function customVars(c){
+  const mix = (a,p,b) => `color-mix(in srgb, ${a} ${p}%, ${b})`;
+  return {
+    '--bg':c.bg, '--surface':c.cell, '--cell':c.cell, '--text':c.given, '--given':c.given,
+    '--muted':mix(c.given,52,c.cell), '--thick':c.thick, '--thin':c.thin,
+    '--user':c.user, '--num':c.user, '--error':c.error, '--error-bg':mix(c.error,28,c.cell),
+    '--sel':c.sel, '--hl':c.hl, '--same':mix(c.sel,62,c.hl),
+    '--accent':c.accent, '--accent-text': lum(c.accent)>.5 ? '#1a1a1a' : '#ffffff',
+    '--btn':mix(c.given,9,c.bg), '--btn-hover':mix(c.given,16,c.bg),
+    '--shadow': lum(c.bg)>.4 ? 'rgba(0,0,0,.18)' : 'rgba(0,0,0,.55)',
+  };
+}
+function applyVars(c){
+  const st = document.body.style;
+  if (!c){ VAR_KEYS.forEach(k => st.removeProperty(k)); return; }
+  Object.entries(customVars(c)).forEach(([k,v]) => st.setProperty(k,v));
+}
+function readTheme(id){
+  const tmp = document.createElement('div'); tmp.dataset.theme = id; tmp.style.display='none';
+  document.body.appendChild(tmp);
+  const cs = getComputedStyle(tmp), out = {};
+  CUSTOM_FIELDS.forEach(([k]) => out[k] = cs.getPropertyValue('--'+k).trim());
+  tmp.remove(); return out;
+}
+
+function setTheme(id){
+  if (id==='custom' && !customTheme) id = 'classic';
+  document.body.dataset.theme = id;
+  applyVars(id==='custom' ? customTheme : null);
+  store.set('sudoku-theme', id);
+  document.querySelectorAll('.swatch').forEach(s => s.classList.toggle('active', s.dataset.t===id));
+  setTimeout(() => placeCursor(true), 0);
+}
+function allThemes(){
+  return customTheme ? [...THEMES, {id:'custom', name:'Własny', a:customTheme.bg, b:customTheme.accent}] : THEMES;
+}
+function renderSwatches(){
+  const box = $('swatches'); box.innerHTML = '';
+  allThemes().forEach(t => {
+    const b = document.createElement('button');
+    b.className = 'swatch'; b.dataset.t = t.id; b.title = t.name; b.setAttribute('aria-label','Motyw: '+t.name);
+    b.innerHTML = `<span style="background:${t.a}"></span><span style="background:${t.b}"></span>`;
+    b.style.borderColor = 'var(--thin)';
+    b.classList.toggle('active', document.body.dataset.theme===t.id);
+    b.addEventListener('click', () => { setTheme(t.id); toast('Motyw: '+t.name); });
+    box.appendChild(b);
+  });
+  const add = document.createElement('button');
+  add.className = 'swatch add'; add.textContent = customTheme ? '✎' : '+';
+  add.title = customTheme ? 'Edytuj własny motyw' : 'Utwórz własny motyw';
+  add.addEventListener('click', e => { e.stopPropagation(); panelOpen ? cancelPanel() : openPanel(); });
+  box.appendChild(add);
+}
+function nextTheme(){
+  const list = allThemes(), cur = list.findIndex(t => t.id===document.body.dataset.theme);
+  const t = list[(cur+1)%list.length]; setTheme(t.id); toast('Motyw: '+t.name);
+}
+
+/* ----- Panel własnego motywu ----- */
+const cpanel = $('cpanel');
+let panelOpen = false, prevTheme = null, draft = null, wasPausedPanel = false;
+
+$('baseSel').innerHTML = THEMES.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+$('cfields').innerHTML = CUSTOM_FIELDS.map(([k,label]) =>
+  `<label class="cfield"><span>${label}</span><span class="pick"><code id="hx-${k}"></code><input type="color" data-k="${k}"></span></label>`).join('');
+const pickers = [...cpanel.querySelectorAll('input[type=color]')];
+
+function fillPickers(c){
+  pickers.forEach(p => { p.value = c[p.dataset.k]; $('hx-'+p.dataset.k).textContent = c[p.dataset.k]; });
+}
+function previewDraft(){
+  document.body.dataset.theme = 'custom'; applyVars(draft);
+}
+function openPanel(){
+  prevTheme = document.body.dataset.theme;
+  const base = THEMES.some(t => t.id===prevTheme) ? prevTheme : 'classic';
+  $('baseSel').value = base;
+  draft = customTheme ? {...customTheme} : readTheme(base);
+  fillPickers(draft); previewDraft();
+  $('cDelete').style.display = customTheme ? '' : 'none';
+  cpanel.classList.add('show'); panelOpen = true;
+}
+function closePanel(){ cpanel.classList.remove('show'); panelOpen = false; }
+function cancelPanel(){ closePanel(); setTheme(prevTheme); }
+
+pickers.forEach(p => p.addEventListener('input', () => {
+  draft[p.dataset.k] = p.value; $('hx-'+p.dataset.k).textContent = p.value; previewDraft();
+}));
+$('baseSel').addEventListener('change', e => { draft = readTheme(e.target.value); fillPickers(draft); previewDraft(); });
+$('cCancel').onclick = cancelPanel;
+$('cSave').onclick = () => {
+  customTheme = {...draft}; store.set('sudoku-custom', customTheme);
+  closePanel(); renderSwatches(); setTheme('custom'); toast('Zapisano własny motyw');
+};
+$('cDelete').onclick = () => {
+  customTheme = null; try{ localStorage.removeItem('sudoku-custom'); }catch(e){}
+  closePanel(); renderSwatches(); setTheme(prevTheme==='custom' ? 'classic' : prevTheme); toast('Usunięto własny motyw');
+};
+cpanel.addEventListener('mousedown', e => e.stopPropagation());
+document.addEventListener('mousedown', e => { if (panelOpen && !e.target.closest('.swatch.add')) cancelPanel(); });
+
+Object.entries(DIFFS).forEach(([k,v]) => {
+  const b = document.createElement('button');
+  b.textContent = v.name; b.dataset.d = k;
+  b.addEventListener('click', () => confirmNew(k));
+  $('diffbar').appendChild(b);
+});
+
+/* ================= Modale ================= */
+const modalBg = $('modalBg'), modal = $('modal');
+let modalOpen = false;
+function openModal(html, wire, kind){
+  modal.dataset.kind = kind || ''; modal.className = 'modal' + (kind==='keys' ? ' wide' : '');
+  modal.innerHTML = html; modalBg.classList.add('show'); modalOpen = true;
+  wire && wire(modal);
+  const p = modal.querySelector('.primary'); p && p.focus();
+}
+function closeModal(){ modalBg.classList.remove('show'); modalOpen = false; }
+
+function confirmNew(diff){
+  const inProgress = S && !S.over && !S.won && S.values.some((v,i) => v && !isGiven(i));
+  if (!inProgress){ newGame(diff); return; }
+  const wasPaused = S.paused; setPaused(true);
+  openModal(`
+    <h2>Rozpocząć nową grę?</h2>
+    <p>Bieżący postęp zostanie utracony.</p>
+    <div class="btns">
+      ${Object.entries(DIFFS).map(([k,v]) => `<button data-d="${k}" class="${k===(diff||S.diff)?'primary':''}">${v.name}</button>`).join('')}
+      <button data-cancel>Anuluj</button>
+    </div>`, m => {
+      m.querySelectorAll('[data-d]').forEach(b => b.onclick = () => newGame(b.dataset.d));
+      m.querySelector('[data-cancel]').onclick = () => { closeModal(); setPaused(wasPaused); };
+    });
+}
+
+function showGameOver(){
+  openModal(`
+    <h2>Koniec gry</h2>
+    <p>Popełniłeś ${MAX_MISTAKES} błędy i przegrałeś tę partię.</p>
+    <div class="btns">
+      <button class="primary" data-second>Druga szansa</button>
+      <button data-new>Nowa gra</button>
+    </div>`, m => {
+      m.querySelector('[data-second]').onclick = () => { S.over=false; S.mistakes=MAX_MISTAKES-1; save(); closeModal(); renderAll(); };
+      m.querySelector('[data-new]').onclick = () => newGame(S.diff);
+    });
+}
+
+function showWin(){
+  const best = store.get('sudoku-best') || {};
+  const prev = best[S.diff];
+  const record = !prev || S.time < prev;
+  if (record){ best[S.diff] = S.time; store.set('sudoku-best', best); }
+  openModal(`
+    <h2>🎉 Brawo!</h2>
+    <p>Rozwiązałeś sudoku na poziomie <b>${DIFFS[S.diff].name}</b>.${record ? '<br>Nowy rekord czasu!' : `<br>Rekord: ${fmt(prev)}`}</p>
+    <div class="grid">
+      <div>Czas<b>${fmt(S.time)}</b></div>
+      <div>Błędy<b>${S.mistakes}</b></div>
+      <div>Wynik<b>${S.score}</b></div>
+    </div>
+    <div class="btns"><button class="primary" data-new>Nowa gra</button></div>`, m => {
+      m.querySelector('[data-new]').onclick = () => newGame(S.diff);
+    });
+}
+
+let toastT;
+function toast(msg){
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 1400);
+}
+
+/* ================= Zdarzenia ================= */
+$('undoBtn').onclick = undo;
+$('eraseBtn').onclick = erase;
+$('notesBtn').onclick = toggleNotes;
+$('hintBtn').onclick = hint;
+$('newBtn').onclick = () => confirmNew(S.diff);
+$('pauseBtn').onclick = () => setPaused(!S.paused);
+$('resumeBtn').onclick = () => setPaused(false);
+document.querySelectorAll('.tool,.newgame,.pausebtn').forEach(b => b.addEventListener('mousedown', e => e.preventDefault()));
+
+document.addEventListener('keydown', e => {
+  if (panelOpen){ if (e.key==='Escape') cancelPanel(); return; }
+  if (sideOpen && e.key==='Escape'){ toggleSide(false); return; }
+  if (e.target.matches && e.target.matches('input,select')) return;
+  if (modalOpen){
+    if (e.key==='Escape' || (e.key==='?' && modal.dataset.kind==='keys')){ e.preventDefault(); const c = modal.querySelector('[data-cancel]'); c && c.click(); }
+    return;
+  }
+  const k = e.key, code = e.code;
+  if ((e.ctrlKey||e.metaKey) && (k==='z'||k==='Z')){ e.preventDefault(); undo(); return; }
+  if (e.ctrlKey||e.metaKey||e.altKey) return;
+
+  const m = code.match(/^(Digit|Numpad)([1-9])$/);
+  if (m){ e.preventDefault(); input(+m[2], e.shiftKey); return; }
+
+  switch (k){
+    case 'ArrowUp':    e.preventDefault(); move(-1,0); break;
+    case 'ArrowDown':  e.preventDefault(); move(1,0); break;
+    case 'ArrowLeft':  e.preventDefault(); move(0,-1); break;
+    case 'ArrowRight': e.preventDefault(); move(0,1); break;
+    case ' ':          e.preventDefault(); toggleNotes(); break;
+    case 'Backspace': case 'Delete': case '0': e.preventDefault(); erase(); break;
+    case 'h': case 'H': hint(); break;
+    case 'p': case 'P': setPaused(!S.paused); break;
+    case 't': case 'T': nextTheme(); break;
+    case 'n': case 'N': confirmNew(S.diff); break;
+    case 'z': case 'Z': undo(); break;
+    case 'f': case 'F': toggleFocus(); break;
+    case 'm': case 'M': toggleSide(); break;
+    case '?': showKeys(); break;
+    case 'Escape':
+      if (document.body.classList.contains('focus')) toggleFocus(false);
+      else if (S.paused) setPaused(false);
+      break;
+  }
+});
+
+function toggleFocus(force){
+  const on = force===undefined ? !document.body.classList.contains('focus') : force;
+  if (on === document.body.classList.contains('focus')) return;
+  const apply = () => { document.body.classList.toggle('focus', on); placeCursor(true); };
+  if (document.startViewTransition) document.startViewTransition(apply); else apply();
+  if (on) toast('Tryb skupienia · F lub Esc, aby wyjść');
+}
+
+document.addEventListener('visibilitychange', () => { if (document.hidden && S && !S.paused && !S.over && !S.won) setPaused(true); });
+
+/* ================= Skróty pod ? ================= */
+function showKeys(){
+  openModal(`<h2>Skróty klawiszowe</h2>${$('keysTpl').innerHTML}
+    <div class="btns"><button class="primary" data-cancel>Zamknij</button></div>`,
+    m => m.querySelector('[data-cancel]').onclick = closeModal, 'keys');
+}
+$('keysBtn').addEventListener('mousedown', e => e.preventDefault());
+$('keysBtn').onclick = showKeys;
+
+/* ================= Opcje ================= */
+const OPTS = [
+  ['hl','Podświetlaj wiersz, kolumnę i kwadrat','Jasne tło wokół zaznaczonego pola'],
+  ['same','Podświetlaj te same cyfry','Np. wszystkie piątki po kliknięciu w 5'],
+  ['autoClear','Usuwaj notatki automatycznie','Po wpisaniu cyfry znika z notatek w okolicy'],
+  ['limit','Limit 3 błędów','Wyłączone: grasz bez przegranej'],
+  ['anim','Animacja kursora','Płynny przeskok i „oddychająca” ramka'],
+  ['counts','Licznik pozostałych cyfr','Mała liczba pod cyframi 1–9'],
+];
+function applySettings(){
+  document.body.classList.toggle('no-anim', !SET.anim);
+  document.body.classList.toggle('no-counts', !SET.counts);
+}
+function setOpt(k, v){
+  SET = {...SET, [k]: v}; store.set('sudoku-settings', SET); applySettings();
+  if (k==='limit' && v && S.mistakes >= MAX_MISTAKES){ S.mistakes = MAX_MISTAKES-1; save(); }
+  renderAll();
+}
+
+/* ================= Konta (baza strony + konto Claude) ================= */
+const A = { status:'loading', db:null, user:null, uid:null, me:null, owner:false,
+            account:null, loggedIn:false, msg:null, list:null, profiles:{}, listErr:null, q:'' };
+let accWrite = Promise.resolve();
+
+function saveAccount(patch){
+  if (!A.db || !A.uid || !A.account) return;
+  A.account = {...A.account, ...patch};
+  const data = JSON.parse(JSON.stringify(A.account));
+  accWrite = accWrite.then(() => A.db.doc('accounts/'+A.uid).set(data))
+    .catch(e => { A.msg = {err:true, t: writeErrText(e)}; renderSide(); });
+}
+function writeErrText(e){
+  const c = e && e.code;
+  if (c==='invalid_argument') return 'Nie masz uprawnień do zapisu. Właściciel strony musi ją Ci udostępnić z prawem edycji.';
+  if (c==='quota_exceeded') return 'Baza kont jest pełna.';
+  return 'Nie udało się zapisać. Spróbuj ponownie za chwilę.';
+}
+function accountEvent(type){
+  if (!A.loggedIn || !A.account) return;
+  const a = A.account, now = Date.now();
+  if (type==='start') saveAccount({started:(a.started||0)+1, lastSeen:now});
+  if (type==='lose')  saveAccount({lost:(a.lost||0)+1, lastSeen:now});
+  if (type==='win'){
+    const best = {...(a.best||{})};
+    if (!best[S.diff] || S.time < best[S.diff]) best[S.diff] = S.time;
+    saveAccount({won:(a.won||0)+1, best, lastSeen:now, points:(a.points||0)+S.score});
+  }
+}
+
+async function initAccounts(){
+  if (!window.claude || !window.claude.use){ A.status = 'unavailable'; renderSide(); return; }
+  const giveUp = setTimeout(() => { if (A.status==='loading'){ A.status='unavailable'; renderSide(); } }, 10000);
+  try{
+    const [db, user] = await Promise.all([claude.use('db'), claude.use('user')]);
+    if (!db || !user){ clearTimeout(giveUp); A.status='unavailable'; renderSide(); return; }
+    A.db = db; A.user = user;
+    A.uid = await user.id();
+    A.me = await user.me();
+    A.owner = !!(await user.isOwner());
+    if (!A.uid){ clearTimeout(giveUp); A.status='unavailable'; renderSide(); return; }
+    db.doc('accounts/'+A.uid).onSnapshot(snap => {
+      clearTimeout(giveUp);
+      A.account = snap.exists ? {...snap.data()} : null;
+      A.status = 'ready';
+      A.loggedIn = !!A.account && store.get('sudoku-logged') === A.uid;
+      renderSide();
+    }, () => { clearTimeout(giveUp); A.status='unavailable'; renderSide(); });
+  }catch(e){ clearTimeout(giveUp); A.status='unavailable'; renderSide(); }
+}
+
+let adminSub = null;
+function startAdmin(){
+  if (adminSub || !A.db || !isAdmin()) return;
+  adminSub = A.db.collection('accounts').onSnapshot(async snap => {
+    A.list = snap.docs.map(d => ({id:d.id, ...d.data()}));
+    A.listErr = null;
+    try{ A.profiles = await A.user.profiles(A.list.map(a => a.id)) || {}; }catch(e){}
+    if (activeTab==='admin') renderSideBody();
+  }, () => { A.listErr = 'Nie udało się wczytać listy kont.'; if (activeTab==='admin') renderSideBody(); });
+}
+
+/* ================= Pasek boczny ================= */
+const side = $('side'), scrim = $('scrim'), dock = $('dock');
+let sideOpen = false, activeTab = 'login';
+const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtDate = ms => ms ? new Date(ms).toLocaleString('pl-PL',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+const myEmail = () => (A.me && A.me.email) || '';
+// Admin = zalogowane konto z rolą „admin”. Rolę dostaje tylko konto właściciela strony,
+// a dane wszystkich kont i tak może odczytać wyłącznie właściciel (pilnuje tego baza).
+const isAdmin = () => !!(A.owner && A.loggedIn && A.account && A.account.role==='admin');
+function stopAdmin(){ if (adminSub){ adminSub(); adminSub = null; } A.list = null; A.profiles = {}; }
+
+function toggleSide(force){
+  sideOpen = force===undefined ? !sideOpen : force;
+  side.style.transform = '';
+  side.classList.toggle('open', sideOpen);
+  scrim.classList.toggle('show', sideOpen);
+  if (sideOpen && S && !S.paused && !S.over && !S.won) { setPaused(true); side.dataset.paused = '1'; }
+  if (!sideOpen && side.dataset.paused){ delete side.dataset.paused; setPaused(false); }
+  if (sideOpen) renderSide();
+}
+$('sideClose').onclick = () => toggleSide(false);
+scrim.onclick = () => toggleSide(false);
+
+// Wysuwanie przeciąganiem od lewej do prawej (jak pasek w Windows) albo kliknięciem
+(function dragDock(){
+  let x0 = null, moved = false, w = 0;
+  dock.addEventListener('pointerdown', e => {
+    x0 = e.clientX; moved = false; w = side.offsetWidth;
+    dock.setPointerCapture(e.pointerId); side.classList.add('dragging');
+  });
+  dock.addEventListener('pointermove', e => {
+    if (x0===null) return;
+    const dx = Math.max(0, Math.min(w, e.clientX - x0));
+    if (dx > 4) moved = true;
+    if (moved){ side.style.transform = `translateX(${dx - w}px)`; scrim.classList.add('show'); scrim.style.opacity = dx/w; }
+  });
+  const end = e => {
+    if (x0===null) return;
+    const dx = e.clientX - x0; x0 = null;
+    side.classList.remove('dragging'); scrim.style.opacity = '';
+    toggleSide(moved ? dx > w*0.3 : true);
+  };
+  dock.addEventListener('pointerup', end);
+  dock.addEventListener('pointercancel', end);
+})();
+
+function tabs(){
+  const t = [];
+  if (A.loggedIn) t.push(['account','Moje konto']);
+  else { t.push(['login','Zaloguj się']); t.push(['register','Zarejestruj się']); }
+  t.push(['options','Opcje']);
+  if (isAdmin()) t.push(['admin','Panel admina']);
+  return t;
+}
+function renderSide(){
+  const t = tabs();
+  if (!t.some(x => x[0]===activeTab)) activeTab = t[0][0];
+  $('sideTabs').innerHTML = t.map(([k,l]) => `<button data-tab="${k}" class="${k===activeTab?'active':''} ${k==='admin'?'admin':''}">${l}</button>`).join('');
+  $('sideTabs').querySelectorAll('button').forEach(b => b.onclick = () => { activeTab = b.dataset.tab; A.msg = null; renderSide(); });
+  const nick = A.loggedIn && A.account ? A.account.nick : '';
+  $('avatar').textContent = nick ? nick[0].toUpperCase() : '?';
+  $('who').textContent = nick || 'Niezalogowany';
+  $('whoSub').textContent = nick ? ((A.account && A.account.email) || myEmail() || 'Konto Sudoku') + (isAdmin() ? ' · admin' : '') : 'Konto Sudoku';
+  if (!isAdmin()) stopAdmin();
+  side.classList.toggle('wide', activeTab==='admin');
+  if (activeTab==='admin' && isAdmin()) startAdmin();
+  renderSideBody();
+}
+
+function idCard(){
+  const em = myEmail();
+  return `<div class="idcard">
+    <svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg>
+    <div><b>${em ? esc(em) : 'Twoje konto Claude'}</b>
+    <span>${em ? 'Pobrane automatycznie z konta Claude. Nie musisz nic wpisywać.' : 'Adres nie został udostępniony, ale konto i tak przypisze się do Ciebie automatycznie.'}</span></div>
+  </div>`;
+}
+function msgHtml(){ return A.msg ? `<div class="msg ${A.msg.err?'err':'ok'}">${esc(A.msg.t)}</div>` : ''; }
+function unavailableHtml(){
+  return A.status==='loading'
+    ? `<p>Łączenie z bazą kont…</p>`
+    : (window.claude
+        ? `<div class="msg err">Konta nie są dostępne w tym widoku.</div><p>Logowanie działa, gdy strona jest otwarta na claude.ai i jesteś zalogowany na swoje konto Claude. Gra i opcje działają normalnie.</p>`
+        : `<div class="msg">Logowanie i rejestracja są w przygotowaniu.</div><p>Wkrótce założysz tu konto e-mailem z weryfikacją. Gra, motywy i opcje działają już normalnie.</p>`);
+}
+
+function renderSideBody(){
+  const body = $('sideBody');
+  let h = '';
+  if (activeTab==='options'){
+    h = `<h4>Motyw</h4><div class="themechips">${allThemes().map(t =>
+          `<button data-theme-id="${t.id}" class="${document.body.dataset.theme===t.id?'active':''}"><i style="background:linear-gradient(135deg,${t.a} 50%,${t.b} 50%)"></i>${t.name}</button>`).join('')}</div>
+        <h4>Gra</h4>` +
+        OPTS.map(([k,l,d]) => `<label class="opt"><span>${l}<small>${d}</small></span><span class="sw"><input type="checkbox" data-opt="${k}" ${SET[k]?'checked':''}><span></span></span></label>`).join('') +
+        `<p style="margin-top:14px">Ustawienia zapisują się w tej przeglądarce.</p>`;
+    body.innerHTML = h;
+    body.querySelectorAll('[data-opt]').forEach(i => i.onchange = () => setOpt(i.dataset.opt, i.checked));
+    body.querySelectorAll('[data-theme-id]').forEach(b => b.onclick = () => { setTheme(b.dataset.themeId); renderSideBody(); });
+    return;
+  }
+  if (A.status!=='ready'){ body.innerHTML = unavailableHtml(); return; }
+
+  if (activeTab==='login'){
+    h = `<h4>Zaloguj się</h4>
+      <p>Wpisz adres e-mail, którego użyłeś przy rejestracji.</p>
+      ${msgHtml()}
+      <label class="f">E-mail</label>
+      <input type="text" id="emailIn" inputmode="email" autocomplete="email" placeholder="np. jan@gmail.com" value="${esc(A.lastEmail || '')}">
+      <button class="sbtn primary" id="doLogin">Zaloguj się</button>
+      ${A.account ? '' : `<button class="sbtn" id="goReg">Nie mam konta – zarejestruj mnie</button>`}`;
+  }
+  else if (activeTab==='register'){
+    if (A.account){
+      h = `<h4>Zarejestruj się</h4><div class="msg ok">Masz już konto „${esc(A.account.nick)}” na ten adres.</div>
+           <button class="sbtn primary" id="doLogin">Zaloguj się</button>`;
+    } else {
+      const suggested = (myEmail().split('@')[0] || (A.me && A.me.name) || '').slice(0,20);
+      h = `<h4>Załóż konto</h4>
+        <p>Konto zapisuje Twoje statystyki: rozegrane i wygrane gry oraz rekordy czasu na każdym poziomie.</p>
+        ${msgHtml()}
+        <label class="f">E-mail</label>
+        <input type="text" id="emailIn" inputmode="email" autocomplete="email" placeholder="np. jan@gmail.com" value="${esc(A.lastEmail || myEmail())}">
+        <label class="f">Nazwa gracza</label><input type="text" id="nickIn" maxlength="20" value="${esc(suggested)}" placeholder="np. SudokuMistrz">
+        <button class="sbtn primary" id="doReg">Załóż konto</button>`;
+    }
+  }
+  else if (activeTab==='account' && A.account){
+    const a = A.account, best = a.best || {};
+    h = `<h4>${esc(a.nick)}${isAdmin()?' <span class="rolebadge">Admin</span>':''}</h4>
+      <p>${esc(a.email || myEmail())}<br>Konto od ${fmtDate(a.createdAt)}</p>
+      ${msgHtml()}
+      <div class="statgrid">
+        <div>Rozpoczęte<b>${a.started||0}</b></div><div>Wygrane<b>${a.won||0}</b></div><div>Przegrane<b>${a.lost||0}</b></div>
+      </div>
+      <h4>Rekordy czasu</h4>
+      <table class="besttab">${Object.entries(DIFFS).map(([k,v]) => `<tr><td>${v.name}</td><td>${best[k]!=null?fmt(best[k]):'—'}</td></tr>`).join('')}</table>
+      <label class="f">Nazwa gracza</label><input type="text" id="nickIn" maxlength="20" value="${esc(a.nick)}">
+      <label class="f">E-mail</label><input type="text" id="emailIn" inputmode="email" autocomplete="email" value="${esc(a.email || myEmail())}">
+      <button class="sbtn" id="doNick">Zapisz zmiany</button>
+      <button class="sbtn danger" id="doLogout">Wyloguj się</button>`;
+  }
+  else if (activeTab==='admin' && isAdmin()){
+    h = adminHtml();
+  }
+  body.innerHTML = h;
+  wireSide(body);
+}
+
+function adminHtml(){
+  if (A.listErr) return `<div class="msg err">${esc(A.listErr)}</div>`;
+  if (!A.list) return `<p>Wczytywanie kont…</p>`;
+  const q = A.q.trim().toLowerCase();
+  const rows = A.list
+    .map(a => { const ce = (A.profiles[a.id] && A.profiles[a.id].email) || ''; return {...a, email:a.email || ce, claudeEmail:ce}; })
+    .filter(a => !q || (a.nick||'').toLowerCase().includes(q) || a.email.toLowerCase().includes(q) || a.claudeEmail.toLowerCase().includes(q))
+    .sort((x,y) => (y.lastSeen||0) - (x.lastSeen||0));
+  const tot = k => A.list.reduce((s,a) => s + (a[k]||0), 0);
+  return `<h4>Panel admina</h4>
+    <p>Wszystkie konta zarejestrowane na tej stronie. Widzisz je tylko Ty jako właściciel.</p>
+    <div class="asum"><div>Konta<b>${A.list.length}</b></div><div>Gry<b>${tot('started')}</b></div><div>Wygrane<b>${tot('won')}</b></div><div>Przegrane<b>${tot('lost')}</b></div></div>
+    <div class="asearch"><input type="text" id="aq" placeholder="Szukaj po nazwie lub e-mailu…" value="${esc(A.q)}"></div>
+    ${rows.length ? `<table class="atable"><thead><tr><th>Gracz</th><th>E-mail</th><th>Gry</th><th>Ostatnio</th><th></th></tr></thead><tbody>
+      ${rows.map(a => {
+        const best = a.best || {};
+        const bestTxt = Object.entries(DIFFS).filter(([k]) => best[k]!=null).map(([k,v]) => `${v.name}: ${fmt(best[k])}`).join(' · ') || 'brak rekordów';
+        return `<tr>
+          <td><b style="font-weight:500">${esc(a.nick||'—')}</b>${a.role==='admin'?'<span class="tag">Admin</span>':''}${a.id===A.uid?'<span class="tag" style="background:var(--muted)">Ty</span>':''}<div class="det">od ${fmtDate(a.createdAt)}<br>${bestTxt}</div></td>
+          <td class="em">${esc(a.email || '—')}${a.claudeEmail && a.claudeEmail.toLowerCase()!==(a.email||'').toLowerCase() ? `<div class="det">konto Claude: ${esc(a.claudeEmail)}</div>` : ''}</td>
+          <td>${a.won||0} / ${a.started||0}<div class="det">wygr. / rozp.<br>przegr.: ${a.lost||0}</div></td>
+          <td class="det">${fmtDate(a.lastSeen)}</td>
+          <td>${a.id===A.uid?'':`<button data-del="${esc(a.id)}">Usuń</button>`}</td></tr>`;
+      }).join('')}</tbody></table>` : `<p>${A.list.length ? 'Brak wyników.' : 'Nikt jeszcze nie założył konta.'}</p>`}`;
+}
+
+function readEmail(body){
+  const inp = body.querySelector('#emailIn');
+  const em = (inp && inp.value || '').trim().toLowerCase();
+  A.lastEmail = em;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(em)){
+    A.msg = {err:true, t: em ? 'To nie wygląda na poprawny adres e-mail.' : 'Wpisz adres e-mail.'}; renderSideBody();
+    const n = $('sideBody').querySelector('#emailIn'); n && n.focus();
+    return null;
+  }
+  return em;
+}
+function wireSide(body){
+  const on = (id, fn) => { const el = body.querySelector('#'+id); el && (el.onclick = fn); };
+  on('goReg', () => { activeTab='register'; A.msg=null; renderSide(); });
+  on('doLogin', () => {
+    const inp = body.querySelector('#emailIn');
+    if (inp){
+      const em = readEmail(body); if (em===null) return;
+      if (!A.account){ A.msg = {err:true, t:'Nie ma jeszcze konta dla tego adresu. Najpierw się zarejestruj.'}; renderSideBody(); return; }
+      const stored = (A.account.email || myEmail()).toLowerCase();
+      if (stored && em !== stored){ A.msg = {err:true, t:'Ten e-mail nie pasuje do Twojego konta. Sprawdź, czy nie ma literówki.'}; renderSideBody(); return; }
+      if (!A.account.email) saveAccount({email:em});
+    }
+    if (!A.account){ A.msg = {err:true, t:'Nie ma jeszcze konta dla tego adresu. Najpierw się zarejestruj.'}; renderSideBody(); return; }
+    A.loggedIn = true; store.set('sudoku-logged', A.uid); A.msg = null;
+    saveAccount(A.owner && A.account.role!=='admin' ? {lastSeen:Date.now(), role:'admin'} : {lastSeen:Date.now()});
+    activeTab = 'account'; renderSide(); toast('Zalogowano: '+A.account.nick);
+  });
+  on('doReg', async () => {
+    const email = readEmail(body); if (email===null) return;
+    const nick = (body.querySelector('#nickIn').value||'').trim();
+    if (nick.length < 2){ A.msg = {err:true, t:'Nazwa gracza musi mieć co najmniej 2 znaki.'}; renderSideBody(); return; }
+    const now = Date.now();
+    const acc = {nick, email, role: A.owner ? 'admin' : 'user', createdAt:now, lastSeen:now, started:0, won:0, lost:0, points:0, best:{}};
+    try{
+      await A.db.doc('accounts/'+A.uid).set(acc);
+      A.account = acc; A.loggedIn = true; store.set('sudoku-logged', A.uid); A.msg = null;
+      activeTab = 'account'; renderSide(); toast('Konto założone. Witaj, '+nick+'!');
+    }catch(e){ A.msg = {err:true, t:writeErrText(e)}; renderSideBody(); }
+  });
+  on('doNick', () => {
+    const email = readEmail(body); if (email===null) return;
+    const nick = (body.querySelector('#nickIn').value||'').trim();
+    if (nick.length < 2){ A.msg = {err:true, t:'Nazwa gracza musi mieć co najmniej 2 znaki.'}; renderSideBody(); return; }
+    saveAccount({nick, email}); A.msg = {t:'Zapisano zmiany.'}; renderSide();
+  });
+  on('doLogout', () => {
+    A.loggedIn = false; try{ localStorage.removeItem('sudoku-logged'); }catch(e){}
+    A.msg = null; activeTab = 'login'; renderSide(); toast('Wylogowano');
+  });
+  body.querySelectorAll('input[type=text]:not(#aq)').forEach(i => i.addEventListener('keydown', e => {
+    if (e.key==='Enter'){ const b = body.querySelector('#doLogin,#doReg,#doNick'); b && b.click(); }
+  }));
+  const aq = body.querySelector('#aq');
+  if (aq){ aq.oninput = () => { A.q = aq.value; const pos = aq.selectionStart; renderSideBody(); const n = $('sideBody').querySelector('#aq'); n.focus(); n.setSelectionRange(pos,pos); }; }
+  body.querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
+    const a = A.list.find(x => x.id===b.dataset.del);
+    openModal(`<h2>Usunąć konto?</h2><p>Konto „${esc(a && a.nick)}” i jego statystyki zostaną usunięte na zawsze.</p>
+      <div class="btns"><button class="primary" data-yes>Usuń konto</button><button data-cancel>Anuluj</button></div>`, m => {
+        m.querySelector('[data-yes]').onclick = async () => {
+          closeModal();
+          try{ await A.db.doc('accounts/'+b.dataset.del).delete(); toast('Usunięto konto'); }
+          catch(e){ toast('Nie udało się usunąć konta'); }
+        };
+        m.querySelector('[data-cancel]').onclick = closeModal;
+      });
+  });
+}
+
+/* ================= Start ================= */
+SET = {...SET_DEFAULTS, ...(store.get('sudoku-settings')||{})};
+applySettings();
+setTheme(store.get('sudoku-theme') || 'classic');
+renderSwatches();
+if (load()){ renderAll(); startTimer(); }
+else newGame('easy');
+board.focus();
+renderSide();
+initAccounts();
+})();
+</script>
+</body>
+</html>

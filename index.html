@@ -888,6 +888,7 @@ function setTheme(id){
   store.set('sudoku-theme', id);
   document.querySelectorAll('.swatch').forEach(s => s.classList.toggle('active', s.dataset.t===id));
   setTimeout(() => placeCursor(true), 0);
+  syncSettings();
 }
 function allThemes(){
   return customTheme ? [...THEMES, {id:'custom', name:'Własny', a:customTheme.bg, b:customTheme.accent}] : THEMES;
@@ -1172,7 +1173,7 @@ function optionsSectionHtml(){
       <div class="volrow"><input type="range" min="5" max="100" step="5" id="volIn" value="${SET.volume}"><b id="volTxt" style="width:38px;text-align:right;font-weight:500">${SET.volume}%</b><button id="volTest">▶ Test</button></div></div>
     <h4 style="margin-top:18px">Gra</h4>
     ${OPTS.map(tog).join('')}
-    <p style="margin-top:14px">Ustawienia zapisują się w tej przeglądarce.</p>`;
+    <p style="margin-top:14px">${typeof accountActive==='function' && accountActive() ? '☁ Ustawienia zapisują się na Twoim koncie i wczytają się po zalogowaniu na każdym urządzeniu.' : 'Ustawienia zapisują się w tej przeglądarce. Zaloguj się, aby zapisywały się na koncie.'}</p>`;
 }
 function wireOptions(body, rerender){
   body.querySelectorAll('[data-opt]').forEach(i => i.onchange = () => { setOpt(i.dataset.opt, i.checked); if (i.dataset.opt==='sound') { if (i.checked) sfx('place'); rerender(); } });
@@ -1220,6 +1221,30 @@ function setOpt(k, v){
   SET = {...SET, [k]: v}; store.set('sudoku-settings', SET); applySettings();
   if (k==='limit' && v && S.mistakes >= MAX_MISTAKES){ S.mistakes = MAX_MISTAKES-1; save(); }
   renderAll();
+  syncSettings();
+}
+
+/* ----- Ustawienia na koncie: motyw, własny motyw i wszystkie opcje ----- */
+let settingsSyncT = null, applyingRemote = false;
+function settingsPayload(){ return { set:{...SET}, theme:document.body.dataset.theme, custom:customTheme || null }; }
+function syncSettings(){
+  if (applyingRemote || typeof accountActive !== 'function' || !accountActive()) return;
+  clearTimeout(settingsSyncT);
+  settingsSyncT = setTimeout(() => pushSettings(settingsPayload()), 600);   // jeden zapis po serii zmian
+}
+// Wczytuje ustawienia z konta. Zwraca false, gdy konto nie ma jeszcze zapisanych ustawień.
+function applyAccountSettings(st){
+  if (!st || !st.set) return false;
+  applyingRemote = true;
+  try{
+    SET = {...SET_DEFAULTS, ...st.set}; store.set('sudoku-settings', SET); applySettings();
+    customTheme = st.custom || null;
+    if (customTheme) store.set('sudoku-custom', customTheme); else { try{ localStorage.removeItem('sudoku-custom'); }catch(e){} }
+    renderSwatches();
+    setTheme(st.theme || 'classic');
+    if (S) renderAll();
+  } finally { applyingRemote = false; }
+  return true;
 }
 
 /* ================= Konta (Supabase) ================= */
@@ -1242,6 +1267,9 @@ const configured = () => SUPABASE_URL.startsWith('https://') && SUPABASE_KEY.len
 const loggedIn = () => !!(A.session && A.account);
 const isAdmin  = () => loggedIn() && A.account.role === 'admin';
 function godProgress(){ return loggedIn() ? ((A.account.wins||{}).extreme||0) : null; }
+const accountActive = () => loggedIn();
+let settingsFor = null;
+function pushSettings(p){ if (loggedIn()) saveAccount({ settings:p }); }
 const godUnlocked = () => (godProgress() ?? 0) >= GOD_NEED;
 const nowIso = () => new Date().toISOString();
 
@@ -1296,6 +1324,11 @@ async function loadAccount(){
   A.account = data || null;
   A.status = 'ready';
   if (A.account && !lastSeenDone){ lastSeenDone = true; saveAccount({ last_seen: nowIso() }); }
+  if (A.account && settingsFor !== A.account.id){
+    settingsFor = A.account.id;
+    if (applyAccountSettings(A.account.settings)) toast('Wczytano Twoje ustawienia');
+    else pushSettings(settingsPayload());   // pierwsze logowanie: zapisz obecne ustawienia na koncie
+  }
   renderSide();
 }
 
@@ -1666,7 +1699,7 @@ function wireSide(body){
   });
 
   on('doLogout', () => run(async () => {
-    await A.sb.auth.signOut(); A.account = null; A.session = null; A.list = null; lastSeenDone = false;
+    await A.sb.auth.signOut(); A.account = null; A.session = null; A.list = null; lastSeenDone = false; settingsFor = null;
     A.msg = null; activeTab = 'login'; toast('Wylogowano');
   }));
 

@@ -23,6 +23,7 @@ create table if not exists public.profiles (
 );
 alter table public.profiles add column if not exists confirmed boolean not null default false;
 alter table public.profiles add column if not exists wins jsonb not null default '{}'::jsonb;
+alter table public.profiles add column if not exists settings jsonb not null default '{}'::jsonb;  -- motyw i opcje gracza
 
 -- 2) Czy zalogowany użytkownik jest adminem?
 create or replace function public.is_admin()
@@ -93,7 +94,7 @@ create policy "profil: zmiana własnego" on public.profiles
 -- Gracz może zmieniać tylko te kolumny (NIE może nadać sobie roli admina ani zmienić e-maila)
 revoke insert, update, delete on public.profiles from anon, authenticated;
 grant select on public.profiles to authenticated;
-grant update (nick, last_seen, started, won, lost, points, best, wins) on public.profiles to authenticated;
+grant update (nick, last_seen, started, won, lost, points, best, wins, settings) on public.profiles to authenticated;
 
 -- 5) Funkcje dla admina
 create or replace function public.admin_set_role(target uuid, new_role text)

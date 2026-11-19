@@ -18,6 +18,9 @@ const configured = () => SUPABASE_URL.startsWith('https://') && SUPABASE_KEY.len
 const loggedIn = () => !!(A.session && A.account);
 const isAdmin  = () => loggedIn() && A.account.role === 'admin';
 function godProgress(){ return loggedIn() ? ((A.account.wins||{}).extreme||0) : null; }
+const accountActive = () => loggedIn();
+let settingsFor = null;
+function pushSettings(p){ if (loggedIn()) saveAccount({ settings:p }); }
 const godUnlocked = () => (godProgress() ?? 0) >= GOD_NEED;
 const nowIso = () => new Date().toISOString();
 
@@ -72,6 +75,11 @@ async function loadAccount(){
   A.account = data || null;
   A.status = 'ready';
   if (A.account && !lastSeenDone){ lastSeenDone = true; saveAccount({ last_seen: nowIso() }); }
+  if (A.account && settingsFor !== A.account.id){
+    settingsFor = A.account.id;
+    if (applyAccountSettings(A.account.settings)) toast('Wczytano Twoje ustawienia');
+    else pushSettings(settingsPayload());   // pierwsze logowanie: zapisz obecne ustawienia na koncie
+  }
   renderSide();
 }
 
@@ -442,7 +450,7 @@ function wireSide(body){
   });
 
   on('doLogout', () => run(async () => {
-    await A.sb.auth.signOut(); A.account = null; A.session = null; A.list = null; lastSeenDone = false;
+    await A.sb.auth.signOut(); A.account = null; A.session = null; A.list = null; lastSeenDone = false; settingsFor = null;
     A.msg = null; activeTab = 'login'; toast('Wylogowano');
   }));
 

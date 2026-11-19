@@ -120,7 +120,7 @@ async function loadAdminList(){
 const side = $('side'), scrim = $('scrim'), dock = $('dock');
 let sideOpen = false, activeTab = 'login';
 const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const fmtDate = v => v ? new Date(v).toLocaleString('pl-PL',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+const fmtDate = v => v ? new Date(v).toLocaleString(LOCALE(),{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
 
 function toggleSide(force){
   sideOpen = force===undefined ? !sideOpen : force;

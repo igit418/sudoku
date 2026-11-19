@@ -309,6 +309,8 @@ body.contrast .notes span{color:var(--text);opacity:.8}
 .godrules li{font-size:15.5px;line-height:1.5;color:var(--text);background:var(--btn);border-radius:8px;padding:9px 12px;border-left:4px solid #ff3d6e}
 .godrules b{font-weight:600}
 .modal.godinfo p.godwarn{color:var(--error);font-size:14px;font-weight:500;margin-bottom:12px}
+.langseg button{font-size:14px;padding:9px 6px;display:flex;align-items:center;justify-content:center;gap:4px}
+.langseg .flag{font-size:10.5px;font-weight:700;letter-spacing:.04em;padding:2px 5px;border-radius:5px;background:var(--accent);color:var(--accent-text);line-height:1.2}
 .godskip{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;font-size:14.5px;color:var(--text);cursor:pointer}
 .godskip input{width:17px;height:17px;accent-color:var(--accent)}
 
@@ -471,6 +473,270 @@ body.focus .board{border-width:3px}
 
 <script>
 (() => {
+/* ================= Język (polski / angielski) =================
+   Strona jest pisana po polsku. Po wybraniu angielskiego ta warstwa podmienia teksty
+   na stronie w locie (również te, które pojawią się później: okna, menu, komunikaty).
+   Oryginał każdego tekstu jest zapamiętany, więc powrót do polskiego przywraca go 1:1. */
+const EN = {
+  // nagłówek, poziomy, statystyki
+  'Motyw:':'Theme:', 'Poziom trudności:':'Difficulty:', 'Błędy:':'Mistakes:', 'Wynik:':'Score:',
+  'Łatwy':'Easy', 'Średni':'Medium', 'Trudny':'Hard', 'Ekspert':'Expert', 'Mistrz':'Master', 'Ekstremalny':'Extreme',
+  'Gra wstrzymana':'Game paused', 'Cofnij':'Undo', 'Wymaż':'Erase', 'Notatki':'Notes', 'Podpowiedź':'Hint', 'Nowa gra':'New game',
+  'Pauza':'Pause', 'Pauza (P)':'Pause (P)', 'Wznów':'Resume', 'Plansza sudoku':'Sudoku board',
+  'Cofnij (Ctrl+Z)':'Undo (Ctrl+Z)', 'Wymaż (Backspace)':'Erase (Backspace)', 'Notatki (Spacja)':'Notes (Space)', 'Podpowiedź (H)':'Hint (H)',
+  'Tryb GOD: bez pauzy':'GOD mode: no pause',
+  // motywy
+  'Klasyczny':'Classic', 'Ciemny':'Dark', 'Sepia':'Sepia', 'Miętowy':'Mint', 'Fioletowy':'Violet', 'Własny':'Custom',
+  'Własny motyw':'Custom theme', 'Zmiany widzisz od razu na planszy.':'You see changes on the board right away.',
+  'Zacznij od:':'Start from:', 'Anuluj':'Cancel', 'Usuń':'Delete', 'Zapisz':'Save',
+  'Tło strony':'Page background', 'Tło planszy':'Board background', 'Grube linie':'Thick lines', 'Cienkie linie':'Thin lines',
+  'Cyfry startowe i tekst':'Given digits and text', 'Twoje cyfry':'Your digits', 'Akcent i kursor':'Accent and cursor',
+  'Zaznaczone pole':'Selected cell', 'Podświetlenie wiersza/kolumny':'Row/column highlight', 'Błędy':'Mistakes',
+  'Edytuj własny motyw':'Edit custom theme', 'Utwórz własny motyw':'Create custom theme',
+  'Zapisano własny motyw':'Custom theme saved', 'Usunięto własny motyw':'Custom theme deleted',
+  // skróty
+  'Skróty klawiszowe':'Keyboard shortcuts', 'Skróty klawiszowe (?)':'Keyboard shortcuts (?)', 'Zamknij':'Close',
+  'ruch po planszy':'move around the board', 'wpisz cyfrę':'enter a digit', 'Spacja':'Space',
+  'ołówek (notatki) ON/OFF':'pencil (notes) ON/OFF', 'szybka notatka':'quick note', 'wymaż':'erase', 'cofnij':'undo',
+  'podpowiedź':'hint', 'pauza / wznów':'pause / resume', 'następny motyw':'next theme', 'nowa gra':'new game',
+  'tryb skupienia (duża plansza)':'focus mode (large board)', 'menu (pasek z lewej)':'menu (left sidebar)', 'pokaż / ukryj skróty':'show / hide shortcuts',
+  'Tryb skupienia · F lub Esc, aby wyjść':'Focus mode · F or Esc to exit',
+  // okna gry
+  'Rozpocząć nową grę?':'Start a new game?', 'Bieżący postęp zostanie utracony.':'Your current progress will be lost.',
+  'Koniec gry':'Game over', 'Druga szansa':'Second chance', 'W trybie GOD jeden błąd kończy grę.':'In GOD mode one mistake ends the game.',
+  '🎉 Brawo!':'🎉 Well done!', 'Nowy rekord czasu!':'New best time!', 'Czas':'Time', 'Wynik':'Score',
+  'Brak podpowiedzi':'No hints left', 'W trybie GOD nie ma pauzy':'There is no pause in GOD mode',
+  // GOD
+  '🔒 Tryb GOD':'🔒 GOD mode', 'Najtrudniejszy poziom dla zaawansowanych graczy. Zasady:':'The hardest level, for advanced players. Rules:',
+  'najtrudniejsze plansze w grze,':'the hardest boards in the game,', 'po zaznaczeniu cyfry':'when you select a digit,',
+  'nie podświetlają się':'the same digits are not highlighted', 'te same cyfry na planszy,':'on the board,',
+  'tylko 1 błąd':'only 1 mistake', '– pierwsza pomyłka kończy grę,':'– the first mistake ends the game,',
+  'brak pauzy':'no pause', '– czas leci cały czas.':'– the clock never stops.',
+  'Zaloguj się':'Log in', 'Zagraj na Ekstremalnym':'Play on Extreme', 'Zasady trybu GOD':'GOD mode rules',
+  'To najtrudniejszy tryb w grze. Różni się od pozostałych poziomów:':'The hardest mode in the game. It differs from other levels:',
+  'Tylko 1 błąd.':'Only 1 mistake.', 'Pierwsza pomyłka kończy grę.':'The first mistake ends the game.',
+  'Brak pauzy.':'No pause.', 'Czas leci cały czas, także przy otwartym menu i po przełączeniu karty.':'The clock keeps running, even with the menu open or after switching tabs.',
+  'Bez podświetlania tych samych cyfr.':'No same-digit highlighting.', 'Po zaznaczeniu cyfry nie zobaczysz, gdzie jeszcze stoi na planszy.':'When you select a digit, you will not see where else it is on the board.',
+  'Najtrudniejsze plansze.':'Hardest boards.', 'Wymagają zaawansowanych technik – proste metody nie wystarczą.':'They require advanced techniques – simple methods are not enough.',
+  'Więcej punktów.':'More points.', '300 za każdą poprawną cyfrę.':'300 for every correct digit.',
+  'Rozpoczęcie gry GOD przerwie bieżącą partię.':'Starting a GOD game will end your current game.',
+  'Zaczynam':'Start', 'Nie pokazuj więcej':'Don’t show again',
+  '🔓 Odblokowałeś tryb GOD!':'🔓 You unlocked GOD mode!', 'Tryb GOD – najtrudniejszy, bez pauzy':'GOD mode – the hardest, no pause',
+  // menu boczne
+  'Menu (M)':'Menu (M)', 'Niezalogowany':'Not logged in', 'Konto Sudoku':'Sudoku account', 'Zamknij menu':'Close menu',
+  'Zarejestruj się':'Sign up', 'Opcje':'Options', 'Moje konto':'My account', 'Panel admina':'Admin panel',
+  // opcje
+  'Język':'Language', 'Motyw':'Theme', 'Czcionka':'Font', 'Czytelność':'Readability', 'Dźwięk':'Sound', 'Gra':'Game',
+  'klasyczna, jak sudoku.com':'classic, like sudoku.com', 'najłatwiej odróżnić znaki':'easiest to tell characters apart',
+  'wygodna do czytania':'comfortable to read', 'miękka, zaokrąglona':'soft, rounded', 'techniczna, równe znaki':'technical, monospaced',
+  'Rozmiar cyfr':'Digit size', 'Dotyczy cyfr i notatek na planszy':'Applies to digits and notes on the board',
+  'Mała':'Small', 'Normalna':'Normal', 'Duża':'Large', 'Bardzo duża':'Extra large',
+  'Pogrubione cyfry startowe':'Bold given digits', 'Łatwiej odróżnić je od wpisanych przez Ciebie':'Easier to tell apart from the ones you enter',
+  'Wyraźne cyfry własne':'Distinct own digits', 'Twoje cyfry w kolorze akcentu, błędy podkreślone falką':'Your digits in the accent colour, mistakes with a wavy underline',
+  'Dźwięki':'Sounds', 'Wpisanie cyfry, notatka, błąd, ukończony wiersz i wygrana':'Entering a digit, notes, mistakes, completed rows and winning',
+  'Głośność':'Volume', '▶ Test':'▶ Test',
+  'Podświetlaj wiersz, kolumnę i kwadrat':'Highlight row, column and box', 'Jasne tło wokół zaznaczonego pola':'Light background around the selected cell',
+  'Podświetlaj te same cyfry':'Highlight same digits', 'Np. wszystkie piątki po kliknięciu w 5':'E.g. all fives after clicking a 5',
+  'Usuwaj notatki automatycznie':'Remove notes automatically', 'Po wpisaniu cyfry znika z notatek w okolicy':'After entering a digit it disappears from nearby notes',
+  'Limit 3 błędów':'3-mistake limit', 'Wyłączone: grasz bez przegranej':'Off: you can’t lose',
+  'Animacja kursora':'Cursor animation', 'Płynny przeskok i „oddychająca” ramka':'Smooth movement and a “breathing” frame',
+  'Licznik pozostałych cyfr':'Remaining digit counter', 'Mała liczba pod cyframi 1–9':'Small number under digits 1–9',
+  'Okno z zasadami trybu GOD':'GOD mode rules window', 'Pokazuj zasady przed rozpoczęciem gry GOD':'Show the rules before starting a GOD game',
+  'Ustawienia zapisują się w tej przeglądarce. Zaloguj się, aby zapisywały się na koncie.':'Settings are saved in this browser. Log in to save them to your account.',
+  '☁ Ustawienia zapisują się na Twoim koncie i wczytają się po zalogowaniu na każdym urządzeniu.':'☁ Settings are saved to your account and load when you log in on any device.',
+  'Ustawienia zapisują się w tej przeglądarce.':'Settings are saved in this browser.',
+  'Wczytano Twoje ustawienia':'Your settings were loaded', 'Regulamin':'Terms of use', 'Polityka prywatności':'Privacy policy',
+  // konta – logowanie i rejestracja
+  'E-mail':'Email', 'Hasło':'Password', 'Pokaż hasło':'Show password', 'np. jan@gmail.com':'e.g. john@gmail.com',
+  'Nie pamiętasz hasła?':'Forgot your password?', 'Nie masz konta? Zarejestruj się':'No account? Sign up',
+  'Wyślij ponownie link potwierdzający':'Resend confirmation link', 'Proszę czekać…':'Please wait…',
+  'Ustaw nowe hasło':'Set a new password', 'Wpisz nowe hasło do swojego konta.':'Enter a new password for your account.',
+  'Nowe hasło':'New password', 'Powtórz nowe hasło':'Repeat new password', 'Zapisz nowe hasło':'Save new password',
+  'Podaj adres e-mail konta. Wyślemy na niego link do ustawienia nowego hasła.':'Enter your account email. We will send you a link to set a new password.',
+  'Wyślij link':'Send link', '← Wróć do logowania':'← Back to log in',
+  'Sprawdź skrzynkę':'Check your inbox', 'Wysłaliśmy link potwierdzający na':'We sent a confirmation link to',
+  '. Kliknij go, aby aktywować konto. Potem możesz się zalogować.':'. Click it to activate your account. Then you can log in.',
+  'Nie widzisz wiadomości? Sprawdź folder Spam lub Oferty. Link jest ważny przez ograniczony czas.':'Can’t see the message? Check your Spam or Promotions folder. The link is valid for a limited time.',
+  'Wyślij link ponownie':'Resend link', 'Przejdź do logowania':'Go to log in',
+  'Załóż konto':'Create account', 'Konto zapisuje Twoje statystyki i rekordy na każdym poziomie. Po rejestracji dostaniesz e-mail z linkiem potwierdzającym.':'An account saves your stats and records on every level. After signing up you will get an email with a confirmation link.',
+  'Nazwa gracza':'Player name', '2–20 znaków':'2–20 characters', 'Powtórz hasło':'Repeat password',
+  'Akceptuję':'I accept the', 'i':'and', 'Politykę prywatności':'Privacy policy', 'Min. 8 znaków, litera i cyfra.':'Min. 8 characters, a letter and a digit.',
+  'Słabe hasło.':'Weak password.', 'W porządku hasło.':'Okay password.', 'Dobre hasło.':'Good password.', 'Bardzo dobre hasło.':'Very strong password.',
+  'Łączenie z serwerem kont…':'Connecting to the account server…', 'Łączenie z bazą kont…':'Connecting to the account database…',
+  'Logowanie i rejestracja są w przygotowaniu.':'Log in and sign up are coming soon.',
+  'Wkrótce założysz tu konto e-mailem z weryfikacją. Gra, motywy i opcje działają już normalnie.':'Soon you will be able to create an account with email verification. The game, themes and options already work.',
+  'Nie udało się połączyć z serwerem kont.':'Could not connect to the account server.', 'Odśwież stronę za chwilę. Gra działa normalnie.':'Refresh the page in a moment. The game works normally.',
+  'Zalogowano':'Logged in', 'Wylogowano':'Logged out', 'Konto założone':'Account created',
+  // błędy
+  'Nieprawidłowy e-mail lub hasło.':'Incorrect email or password.',
+  'Ten adres nie jest jeszcze potwierdzony. Kliknij link w e-mailu, który do Ciebie wysłaliśmy.':'This address is not confirmed yet. Click the link in the email we sent you.',
+  'Konto z tym adresem już istnieje. Zaloguj się albo zresetuj hasło.':'An account with this address already exists. Log in or reset your password.',
+  'Hasło jest za słabe. Użyj co najmniej 8 znaków, w tym litery i cyfry.':'The password is too weak. Use at least 8 characters, including letters and digits.',
+  'Nowe hasło musi być inne niż obecne.':'The new password must be different from the current one.',
+  'Za dużo prób w krótkim czasie. Odczekaj kilka minut i spróbuj ponownie.':'Too many attempts in a short time. Wait a few minutes and try again.',
+  'Ten adres e-mail jest nieprawidłowy.':'This email address is invalid.', 'Brak połączenia z serwerem kont. Sprawdź internet.':'No connection to the account server. Check your internet.',
+  'Wpisz poprawny adres e-mail.':'Enter a valid email address.', 'Wpisz hasło.':'Enter your password.', 'Wpisz adres e-mail.':'Enter an email address.',
+  'To nie wygląda na poprawny adres e-mail.':'That doesn’t look like a valid email address.',
+  'Nazwa gracza musi mieć od 2 do 20 znaków.':'Player name must be 2 to 20 characters long.', 'Nazwa gracza musi mieć co najmniej 2 znaki.':'Player name must be at least 2 characters long.',
+  'Hasła nie są takie same.':'Passwords don’t match.', 'Aby założyć konto, zaakceptuj Regulamin i Politykę prywatności.':'To create an account, accept the Terms of use and Privacy policy.',
+  'Link z e-maila wygasł albo został już użyty. Zaloguj się lub poproś o nowy link.':'The email link has expired or was already used. Log in or request a new link.',
+  'Adres e-mail potwierdzony. Witaj w grze!':'Email confirmed. Welcome to the game!', 'Nowy adres e-mail został potwierdzony.':'Your new email address has been confirmed.',
+  'Nie udało się wczytać profilu. Odśwież stronę.':'Could not load your profile. Refresh the page.', 'Nie udało się zapisać zmian na koncie.':'Could not save changes to your account.',
+  'Hasło zostało zmienione. Jesteś zalogowany.':'Your password has been changed. You are logged in.', 'Hasło zostało zmienione.':'Your password has been changed.',
+  'Zapisano nową nazwę.':'New name saved.', 'To jest Twój obecny adres.':'This is your current address.',
+  'Nie ma jeszcze konta dla tego adresu. Najpierw się zarejestruj.':'There is no account for this address yet. Sign up first.',
+  'Ten e-mail nie pasuje do Twojego konta. Sprawdź, czy nie ma literówki.':'This email doesn’t match your account. Check for typos.',
+  'Nie masz uprawnień do zapisu. Właściciel strony musi ją Ci udostępnić z prawem edycji.':'You don’t have write access. The page owner has to share it with you with edit rights.',
+  'Baza kont jest pełna.':'The account database is full.', 'Nie udało się zapisać. Spróbuj ponownie za chwilę.':'Could not save. Try again in a moment.',
+  'nieznany błąd':'unknown error', 'Nie udało się usunąć konta.':'Could not delete the account.', 'Nie udało się usunąć konta':'Could not delete the account',
+  'Konto zostało usunięte.':'The account has been deleted.', 'Usunięto konto':'Account deleted',
+  // moje konto
+  'Rozpoczęte':'Started', 'Wygrane':'Won', 'Przegrane':'Lost', 'Rekordy czasu':'Best times',
+  'Nowa nazwa':'New name', 'Zapisz nazwę':'Save name', 'Zmień hasło':'Change password', 'Zmień e-mail':'Change email',
+  'Wyślemy link potwierdzający na nowy adres. Zmiana zadziała po jego kliknięciu.':'We will send a confirmation link to the new address. The change takes effect after you click it.',
+  'Nowy e-mail':'New email', 'Wyloguj się':'Log out', 'Usuń moje konto':'Delete my account',
+  'Usunąć konto?':'Delete account?', 'Twoje konto, statystyki i rekordy zostaną usunięte na zawsze. Tego nie da się cofnąć.':'Your account, stats and records will be deleted forever. This cannot be undone.',
+  'Usuń konto':'Delete account', 'Zapisz zmiany':'Save changes', 'Zmień nazwę gracza':'Change player name',
+  // panel admina
+  'Wczytywanie kont…':'Loading accounts…', 'Spróbuj ponownie':'Try again', 'Odśwież':'Refresh',
+  'Wszystkie konta zarejestrowane na stronie. Konta niepotwierdzone to osoby, które nie kliknęły jeszcze linku z e-maila.':'All accounts registered on the site. Unconfirmed accounts belong to people who haven’t clicked the email link yet.',
+  'Wszystkie konta zarejestrowane na tej stronie. Widzisz je tylko Ty jako właściciel.':'All accounts registered on this page. Only you, as the owner, can see them.',
+  'Konta':'Accounts', 'Potwierdzone':'Confirmed', 'Gry':'Games', 'Szukaj po nazwie lub e-mailu…':'Search by name or email…',
+  'Gracz':'Player', 'Ostatnio':'Last seen', 'Brak wyników.':'No results.', 'Nikt jeszcze nie założył konta.':'Nobody has created an account yet.',
+  '✓ potwierdzony':'✓ confirmed', '⏳ niepotwierdzony':'⏳ unconfirmed', 'brak rekordów':'no records',
+  'Nadaj admina':'Make admin', 'Odbierz admina':'Remove admin', 'Ty':'You',
+  'Nadano rolę admina.':'Admin role granted.', 'Odebrano rolę admina.':'Admin role removed.', 'Nie udało się zmienić roli.':'Could not change the role.',
+  'Nie udało się wczytać listy kont.':'Could not load the account list.',
+  // wersja claude.ai
+  'Konta nie są dostępne w tym widoku.':'Accounts are not available in this view.',
+  'Logowanie działa, gdy strona jest otwarta na claude.ai i jesteś zalogowany na swoje konto Claude. Gra i opcje działają normalnie.':'Logging in works when the page is open on claude.ai and you are signed in to your Claude account. The game and options work normally.',
+  'Logujesz się adresem e-mail swojego konta Claude. Nie musisz pamiętać osobnego hasła.':'You log in with your Claude account email. No separate password to remember.',
+  'Wpisz adres e-mail, którego użyłeś przy rejestracji.':'Enter the email address you used to sign up.',
+  'Nie mam konta – zarejestruj mnie':'I don’t have an account – sign me up',
+  'Konto zapisuje Twoje statystyki: rozegrane i wygrane gry oraz rekordy czasu na każdym poziomie.':'An account saves your stats: games played and won, and best times on every level.',
+  'np. SudokuMistrz':'e.g. SudokuMaster', 'Wylogowano ':'Logged out ',
+  // regulamin i prywatność
+  '1. Usługa.':'1. Service.', 'Strona udostępnia bezpłatną grę Sudoku. Konto jest dobrowolne i służy do zapisywania statystyk oraz rekordów.':'The site offers a free Sudoku game. An account is optional and is used to save stats and records.',
+  '2. Konto.':'2. Account.', 'Do założenia konta potrzebny jest adres e-mail, nazwa gracza i hasło. Konto zaczyna działać po potwierdzeniu adresu e-mail linkiem z wiadomości.':'To create an account you need an email address, a player name and a password. The account becomes active after you confirm your email using the link in the message.',
+  '3. Zasady.':'3. Rules.', 'Nie wolno używać obraźliwych nazw gracza, podszywać się pod innych ani próbować obchodzić zabezpieczeń strony. Za naruszenie tych zasad konto może zostać usunięte.':'You may not use offensive player names, impersonate others or try to bypass the site’s security. Accounts that break these rules may be deleted.',
+  '4. Usunięcie konta.':'4. Deleting your account.', 'Możesz w każdej chwili usunąć swoje konto w zakładce „Moje konto”. Usuwa to wszystkie Twoje dane.':'You can delete your account at any time in the “My account” tab. This deletes all your data.',
+  '5. Odpowiedzialność.':'5. Liability.', 'Strona jest projektem hobbystycznym, udostępnianym „tak jak jest”, bez gwarancji ciągłego działania.':'The site is a hobby project provided “as is”, with no guarantee of continuous operation.',
+  '6. Kontakt.':'6. Contact.',
+  'Administrator danych:':'Data controller:', 'Jakie dane zbieramy:':'What data we collect:', 'Po co:':'Why:', 'Gdzie są dane:':'Where the data is stored:',
+  'Jak długo:':'How long:', 'Twoje prawa:':'Your rights:', 'Przeglądarka:':'Browser:',
+  'adres e-mail, nazwę gracza, zaszyfrowane hasło (nikt, także administrator, nie widzi Twojego hasła), daty rejestracji i ostatniej wizyty oraz statystyki gier.':'email address, player name, encrypted password (nobody, including the administrator, can see your password), sign-up and last visit dates, and game stats.',
+  'wyłącznie do prowadzenia konta, logowania i pokazywania Twoich wyników (art. 6 ust. 1 lit. b RODO). Nie wysyłamy reklam i nie sprzedajemy danych.':'only to run your account, log you in and show your results (Art. 6(1)(b) GDPR). We don’t send ads or sell data.',
+  'w usłudze Supabase (serwery w Unii Europejskiej, jeśli projekt tak skonfigurowano). E-maile z linkami wysyła Supabase.':'in the Supabase service (servers in the European Union, if the project is configured that way). Emails with links are sent by Supabase.',
+  'do czasu usunięcia konta.':'until you delete your account.',
+  'wgląd w dane, ich poprawienie, usunięcie (przycisk „Usuń moje konto”), ograniczenie przetwarzania, przeniesienie danych oraz skarga do Prezesa UODO.':'access to your data, correction, deletion (the “Delete my account” button), restriction of processing, data portability, and the right to lodge a complaint with the data protection authority (in Poland: UODO).',
+  'strona zapisuje w pamięci przeglądarki ustawienia gry, motyw i stan bieżącej partii, a po zalogowaniu także sesję logowania. Nie używamy plików cookie do śledzenia.':'the site stores game settings, the theme and your current game in browser storage, and your login session when you are logged in. We don’t use tracking cookies.',
+  'Coś poszło nie tak:':'Something went wrong:',
+  'właściciel strony, kontakt: rogi.kudlaty@gmail.com.':'the site owner, contact: rogi.kudlaty@gmail.com.',
+  'właściciel strony, kontakt: igor.kudlaty@gmail.com.':'the site owner, contact: igor.kudlaty@gmail.com.',
+};
+// Teksty z liczbami i nazwami – zamieniane według wzorca
+const EN_RX = [
+  [/^Nowa gra: (.+)$/, (m,a) => 'New game: ' + tr(a)],
+  [/^Motyw: (.+)$/, (m,a) => 'Theme: ' + tr(a)],
+  [/^od (.+)$/, (m,a) => 'since ' + a],
+  [/^Konto od (.+)$/, (m,a) => 'Member since ' + a],
+  [/^Rekord: (.+)$/, (m,a) => 'Best: ' + a],
+  [/^Rozwiązałeś sudoku na poziomie$/, () => 'You solved the sudoku on'],
+  [/^Popełniłeś (\d+) błędy i przegrałeś tę partię\.$/, (m,n) => `You made ${n} mistakes and lost this game.`],
+  [/^Odblokujesz go po$/, () => 'You will unlock it after'],
+  [/^(\d+) ukończonych grach$/, (m,n) => `${n} completed games`],
+  [/^ na poziomie Ekstremalny $/, () => ' on Extreme '],
+  [/^na swoim koncie$/, () => 'on your account'],
+  [/^\. Najpierw zaloguj się w menu z lewej \($/, () => '. Log in first in the menu on the left ('],
+  [/^Ukończ $/, () => 'Complete '],
+  [/^(\d+) gier$/, (m,n) => `${n} games`],
+  [/^ na poziomie Ekstremalny\. Masz już $/, () => ' on Extreme. You have '],
+  [/^Odblokujesz po (\d+) ukończonych grach na poziomie Ekstremalny$/, (m,n) => `Unlocks after ${n} completed games on Extreme`],
+  [/^Kolejny e-mail możesz wysłać za (\d+) s\.$/, (m,n) => `You can send another email in ${n} s.`],
+  [/^Wysłaliśmy link ponownie na (.+)\.$/, (m,a) => `We sent the link again to ${a}.`],
+  [/^Jeśli istnieje konto z adresem (.+), wysłaliśmy na nie link do zmiany hasła\.$/, (m,a) => `If an account with ${a} exists, we sent it a password reset link.`],
+  [/^Wysłaliśmy link potwierdzający na (.+)\. Kliknij go, aby zakończyć zmianę\.$/, (m,a) => `We sent a confirmation link to ${a}. Click it to finish the change.`],
+  [/^Hasło musi zawierać: (.+)\.$/, (m,a) => 'Password must contain: ' + a.split(', ').map(tr).join(', ') + '.'],
+  [/^Brakuje: (.+)\.$/, (m,a) => 'Missing: ' + a.split(', ').map(tr).join(', ') + '.'],
+  [/^co najmniej 8 znaków$/, () => 'at least 8 characters'], [/^literę$/, () => 'a letter'], [/^cyfrę$/, () => 'a digit'],
+  [/^Konto „(.*)” \((.*)\) i jego statystyki zostaną usunięte na zawsze\.$/, (m,a,b) => `Account “${a}” (${b}) and its stats will be deleted forever.`],
+  [/^Konto „(.*)” i jego statystyki zostaną usunięte na zawsze\.$/, (m,a) => `Account “${a}” and its stats will be deleted forever.`],
+  [/^Masz już konto „(.*)” na ten adres\.$/, (m,a) => `You already have the account “${a}” for this address.`],
+  [/^Konto założone\. Witaj, (.+)!$/, (m,a) => `Account created. Welcome, ${a}!`],
+  [/^Zalogowano: (.+)$/, (m,a) => 'Logged in: ' + a],
+  [/^Coś poszło nie tak: (.+)$/, (m,a) => 'Something went wrong: ' + tr(a)],
+  [/^Nie udało się użyć linku z e-maila: (.+)$/, (m,a) => 'Could not use the email link: ' + a],
+  [/^wygr\. \/ rozp\.$/, () => 'won / started'], [/^przegr\.: (\d+)$/, (m,n) => 'lost: ' + n],
+  [/^Ekstr\.: (.+)$/, (m,a) => 'Extreme: ' + a], [/^konto Claude: (.+)$/, (m,a) => 'Claude account: ' + a],
+  [/^(.+) · admin$/, (m,a) => a + ' · admin'],
+  [/^(Łatwy|Średni|Trudny|Ekspert|Mistrz|Ekstremalny|GOD): (.+)$/, (m,a,b) => tr(a) + ': ' + b],
+  [/^(Łatwy|Średni|Trudny|Ekspert|Mistrz|Ekstremalny)( 🔒)?$/, (m,a,b) => tr(a) + (b||'')],
+  [/^Motyw: (.+)$/, (m,a) => 'Theme: ' + tr(a)],
+];
+
+let LANG = 'pl';
+const ORIG = new WeakMap();        // węzeł tekstowy → {pl, en}
+const ORIG_ATTR = new WeakMap();   // element → {atrybut: {pl, en}}
+const I18N_ATTRS = ['placeholder', 'title', 'aria-label'];
+
+function tr(s){
+  if (s == null) return s;
+  const k = String(s).trim();
+  if (!k) return s;
+  let v = EN[k];
+  if (v === undefined){
+    for (const [rx, f] of EN_RX){ const m = k.match(rx); if (m){ v = f(...m); break; } }
+  }
+  if (v === undefined) return s;
+  return String(s).replace(k, () => v);
+}
+function i18nText(n){
+  const cur = n.nodeValue, o = ORIG.get(n);
+  const pl = (o && o.en === cur) ? o.pl : cur;   // tekst zmieniony z zewnątrz = nowy polski oryginał
+  if (LANG === 'en'){
+    const en = tr(pl);
+    if (en !== pl){ ORIG.set(n, {pl, en}); if (cur !== en) n.nodeValue = en; }
+  } else if (o && o.en === cur && cur !== o.pl){
+    n.nodeValue = o.pl;
+  }
+}
+function i18nAttr(el, a){
+  if (!el.hasAttribute(a)) return;
+  const cur = el.getAttribute(a), all = ORIG_ATTR.get(el) || {}, o = all[a];
+  const pl = (o && o.en === cur) ? o.pl : cur;
+  if (LANG === 'en'){
+    const en = tr(pl);
+    if (en !== pl){ all[a] = {pl, en}; ORIG_ATTR.set(el, all); if (cur !== en) el.setAttribute(a, en); }
+  } else if (o && o.en === cur && cur !== o.pl){
+    el.setAttribute(a, o.pl);
+  }
+}
+function i18nTree(root){
+  if (!root) return;
+  if (root.nodeType === 3){ i18nText(root); return; }
+  if (root.nodeType !== 1 || root.tagName === 'SCRIPT' || root.tagName === 'STYLE') return;
+  I18N_ATTRS.forEach(a => i18nAttr(root, a));
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT, {
+    acceptNode: n => (n.nodeType === 1 && (n.tagName === 'SCRIPT' || n.tagName === 'STYLE')) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT
+  });
+  let n; while ((n = w.nextNode())){ if (n.nodeType === 3) i18nText(n); else I18N_ATTRS.forEach(a => i18nAttr(n, a)); }
+  root.querySelectorAll && root.querySelectorAll('template').forEach(t => i18nTree(t.content));
+}
+new MutationObserver(recs => {
+  for (const r of recs){
+    if (r.type === 'characterData') i18nText(r.target);
+    else if (r.type === 'attributes') i18nAttr(r.target, r.attributeName);
+    else r.addedNodes.forEach(i18nTree);
+  }
+}).observe(document.documentElement, { subtree:true, childList:true, characterData:true, attributes:true, attributeFilter:I18N_ATTRS });
+
+function applyLang(lang){
+  LANG = lang === 'en' ? 'en' : 'pl';
+  document.documentElement.lang = LANG;
+  i18nTree(document.body);
+}
+const LOCALE = () => LANG === 'en' ? 'en-GB' : 'pl-PL';
+
 /* ================= Konfiguracja ================= */
 const DIFFS = {
   easy:   {name:'Łatwy',   clues:40, pts:30},
@@ -492,7 +758,8 @@ const MAX_MISTAKES = 3, MAX_HINTS = 3, GOD_MISTAKES = 1;
 const maxMistakes = () => (S && S.diff==='god') ? GOD_MISTAKES : MAX_MISTAKES;
 const limitOn = () => (S && S.diff==='god') || SET.limit;   // w GOD limit działa zawsze
 const SET_DEFAULTS = {hl:true, same:true, autoClear:true, limit:true, anim:true, counts:true,
-  font:'rubik', size:'m', boldGiven:false, contrast:false, sound:true, volume:45, godInfo:true};
+  font:'rubik', size:'m', boldGiven:false, contrast:false, sound:true, volume:45, godInfo:true,
+  lang: /^pl\b/i.test(navigator.language || 'pl') ? 'pl' : 'en'};   // domyślnie język przeglądarki
 const GOD_NEED = 5;   // ile ukończonych gier na poziomie Ekstremalny odblokowuje GOD
 let SET = SET_DEFAULTS;
 
@@ -1189,6 +1456,7 @@ const SIZES = [['s','Mała',.85,.9], ['m','Normalna',1,1], ['l','Duża',1.15,1.1
 
 function applySettings(){
   const b = document.body;
+  if (SET.lang !== LANG) applyLang(SET.lang);
   b.classList.toggle('no-anim', !SET.anim);
   b.classList.toggle('no-counts', !SET.counts);
   b.classList.toggle('bold-given', !!SET.boldGiven);
@@ -1202,7 +1470,10 @@ function applySettings(){
 /* ----- Wspólny panel Opcji (motyw, czcionka, czytelność, dźwięk, gra) ----- */
 function optionsSectionHtml(){
   const tog = ([k,l,d]) => `<label class="opt"><span>${l}<small>${d}</small></span><span class="sw"><input type="checkbox" data-opt="${k}" ${SET[k]?'checked':''}><span></span></span></label>`;
-  return `<h4>Motyw</h4><div class="themechips">${allThemes().map(t =>
+  return `<h4><span>🌐</span> Język</h4>
+    <div class="seg langseg">${[['pl','PL','Polski'],['en','EN','English']].map(([id,f,l]) =>
+      `<button data-lang="${id}" class="${SET.lang===id?'active':''}" lang="${id}"><span class="flag">${f}</span> <span class="notr">${l}</span></button>`).join('')}</div>
+    <h4 style="margin-top:16px">Motyw</h4><div class="themechips">${allThemes().map(t =>
       `<button data-theme-id="${t.id}" class="${document.body.dataset.theme===t.id?'active':''}"><i style="background:linear-gradient(135deg,${t.a} 50%,${t.b} 50%)"></i>${t.name}</button>`).join('')}</div>
     <h4>Czcionka</h4>
     <div class="fontchips">${FONTS.map(([id,name,css,desc]) =>
@@ -1224,6 +1495,7 @@ function wireOptions(body, rerender){
   body.querySelectorAll('[data-opt]').forEach(i => i.onchange = () => { setOpt(i.dataset.opt, i.checked); if (i.dataset.opt==='sound') { if (i.checked) sfx('place'); rerender(); } });
   body.querySelectorAll('[data-theme-id]').forEach(b => b.onclick = () => { setTheme(b.dataset.themeId); rerender(); });
   body.querySelectorAll('[data-font]').forEach(b => b.onclick = () => { setOpt('font', b.dataset.font); rerender(); });
+  body.querySelectorAll('[data-lang]').forEach(b => b.onclick = () => { setOpt('lang', b.dataset.lang); rerender(); });
   body.querySelectorAll('[data-size]').forEach(b => b.onclick = () => { setOpt('size', b.dataset.size); rerender(); });
   const v = body.querySelector('#volIn');
   if (v){
@@ -1414,7 +1686,7 @@ async function loadAdminList(){
 const side = $('side'), scrim = $('scrim'), dock = $('dock');
 let sideOpen = false, activeTab = 'login';
 const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const fmtDate = v => v ? new Date(v).toLocaleString('pl-PL',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+const fmtDate = v => v ? new Date(v).toLocaleString(LOCALE(),{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
 
 function toggleSide(force){
   sideOpen = force===undefined ? !sideOpen : force;

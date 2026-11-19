@@ -2,7 +2,7 @@
 
 Interaktywne sudoku w stylu sudoku.com: 6 poziomów trudności + odblokowywany tryb **GOD**,
 notatki ołówkiem, timer, błędy i wynik, sterowanie klawiaturą, motywy (także własny),
-wybór czcionki i rozmiaru cyfr, dźwięki oraz tryb skupienia.
+wybór czcionki i rozmiaru cyfr, dźwięki, tryb skupienia oraz język polski i angielski.
 
 **Tryb GOD:** najtrudniejsze plansze, bez podświetlania tych samych cyfr i bez pauzy.
 Odblokowuje się po 5 ukończonych grach na poziomie Ekstremalny na swoim koncie.

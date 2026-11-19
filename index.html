@@ -299,6 +299,19 @@ body.contrast .notes span{color:var(--text);opacity:.8}
 .volrow button:hover{background:var(--btn-hover)}
 
 /* ---------- Tryb GOD ---------- */
+.modal.godinfo{position:relative;max-width:440px;border-radius:10px;text-align:left;padding:26px 26px 18px;border:1px solid var(--thin)}
+.modal-x{position:absolute;top:10px;right:10px;width:34px;height:34px;border-radius:8px;font-size:24px;line-height:1;color:var(--muted);display:grid;place-items:center}
+.modal-x:hover{background:var(--btn);color:var(--text)}
+.godhead{display:flex;align-items:center;gap:10px;margin-bottom:10px;padding-right:30px}
+.godhead h2{margin:0;font-size:21px;font-weight:600;color:var(--text)}
+.modal.godinfo p.godlead{color:var(--text);font-size:15.5px;line-height:1.55;margin-bottom:12px}
+.godrules{list-style:none;margin:0 0 14px;padding:0;display:flex;flex-direction:column;gap:8px}
+.godrules li{font-size:15.5px;line-height:1.5;color:var(--text);background:var(--btn);border-radius:8px;padding:9px 12px;border-left:4px solid #ff3d6e}
+.godrules b{font-weight:600}
+.modal.godinfo p.godwarn{color:var(--error);font-size:14px;font-weight:500;margin-bottom:12px}
+.godskip{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;font-size:14.5px;color:var(--text);cursor:pointer}
+.godskip input{width:17px;height:17px;accent-color:var(--accent)}
+
 .diffbar button.god{font-weight:700;letter-spacing:.06em;background:linear-gradient(90deg,#ff3d6e,#ffb020);-webkit-background-clip:text;background-clip:text;color:transparent}
 .diffbar button.god:hover{background:linear-gradient(90deg,#ff3d6e,#ffb020);-webkit-background-clip:text;background-clip:text;color:transparent;filter:brightness(1.15)}
 .diffbar button.god.locked{background:none;color:var(--muted);-webkit-text-fill-color:var(--muted);opacity:.7;font-weight:600}
@@ -475,9 +488,11 @@ const THEMES = [
   {id:'mint',    name:'Miętowy',   a:'#eef6f2', b:'#2f9e6e'},
   {id:'violet',  name:'Fioletowy', a:'#17112b', b:'#9d7bea'},
 ];
-const MAX_MISTAKES = 3, MAX_HINTS = 3;
+const MAX_MISTAKES = 3, MAX_HINTS = 3, GOD_MISTAKES = 1;
+const maxMistakes = () => (S && S.diff==='god') ? GOD_MISTAKES : MAX_MISTAKES;
+const limitOn = () => (S && S.diff==='god') || SET.limit;   // w GOD limit działa zawsze
 const SET_DEFAULTS = {hl:true, same:true, autoClear:true, limit:true, anim:true, counts:true,
-  font:'rubik', size:'m', boldGiven:false, contrast:false, sound:true, volume:45};
+  font:'rubik', size:'m', boldGiven:false, contrast:false, sound:true, volume:45, godInfo:true};
 const GOD_NEED = 5;   // ile ukończonych gier na poziomie Ekstremalny odblokowuje GOD
 let SET = SET_DEFAULTS;
 
@@ -656,7 +671,7 @@ function input(d, forceNote){
     S.mistakes++;
     sfx('error');
     afterMove(i, false);
-    if (SET.limit && S.mistakes >= MAX_MISTAKES){ S.over = true; save(); accountEvent('lose'); setTimeout(() => sfx('lose'), 250); setTimeout(showGameOver, 350); }
+    if (limitOn() && S.mistakes >= maxMistakes()){ S.over = true; save(); accountEvent('lose'); setTimeout(() => sfx('lose'), 250); setTimeout(showGameOver, 350); }
   }
 }
 
@@ -817,7 +832,7 @@ function placeCursor(instant){
 new ResizeObserver(() => placeCursor(true)).observe(board);
 
 function renderStats(){
-  $('mistakes').textContent = SET.limit ? `${S.mistakes}/${MAX_MISTAKES}` : `${S.mistakes}`;
+  $('mistakes').textContent = limitOn() ? `${S.mistakes}/${maxMistakes()}` : `${S.mistakes}`;
   $('mistakesBox').classList.toggle('bad', S.mistakes>0);
   $('score').textContent = S.score;
   $('time').textContent = fmt(S.time);
@@ -962,7 +977,7 @@ Object.entries(DIFFS).forEach(([k,v]) => {
   const b = document.createElement('button');
   b.textContent = v.name; b.dataset.d = k;
   if (k==='god') b.classList.add('god');
-  b.addEventListener('click', () => (k==='god' && !godUnlocked()) ? showGodLocked() : confirmNew(k));
+  b.addEventListener('click', () => k==='god' ? requestGod() : confirmNew(k));
   $('diffbar').appendChild(b);
 });
 function renderDiffbar(){
@@ -974,6 +989,34 @@ function renderDiffbar(){
 }
 
 /* ================= Tryb GOD ================= */
+// Wybór trybu GOD: zablokowany → okno z postępem; odblokowany → okno z zasadami (chyba że wyłączone)
+function requestGod(fromNewGameModal){
+  if (!godUnlocked()){ showGodLocked(); return; }
+  if (!SET.godInfo){ fromNewGameModal ? newGame('god') : confirmNew('god'); return; }
+  showGodInfo();
+}
+function showGodInfo(){
+  const inProgress = S && !S.over && !S.won && S.diff!=='god' && S.values.some((v,i) => v && !isGiven(i));
+  openModal(`
+    <button class="modal-x" data-cancel aria-label="Zamknij">×</button>
+    <div class="godhead"><span class="godtag" style="display:inline-block">GOD</span><h2>Zasady trybu GOD</h2></div>
+    <p class="godlead">To najtrudniejszy tryb w grze. Różni się od pozostałych poziomów:</p>
+    <ul class="godrules">
+      <li><b>Tylko 1 błąd.</b> Pierwsza pomyłka kończy grę.</li>
+      <li><b>Brak pauzy.</b> Czas leci cały czas, także przy otwartym menu i po przełączeniu karty.</li>
+      <li><b>Bez podświetlania tych samych cyfr.</b> Po zaznaczeniu cyfry nie zobaczysz, gdzie jeszcze stoi na planszy.</li>
+      <li><b>Najtrudniejsze plansze.</b> Wymagają zaawansowanych technik – proste metody nie wystarczą.</li>
+      <li><b>Więcej punktów.</b> 300 za każdą poprawną cyfrę.</li>
+    </ul>
+    ${inProgress ? '<p class="godwarn">Rozpoczęcie gry GOD przerwie bieżącą partię.</p>' : ''}
+    <div class="btns"><button class="primary" data-go>Zaczynam</button></div>
+    <label class="godskip"><input type="checkbox" id="godSkip"> Nie pokazuj więcej</label>`, m => {
+      const skip = () => { if (m.querySelector('#godSkip').checked) setOpt('godInfo', false); };
+      m.querySelector('[data-cancel]').onclick = () => { skip(); closeModal(); };
+      m.querySelector('[data-go]').onclick = () => { skip(); closeModal(); newGame('god'); };
+    }, 'god');
+}
+
 function showGodLocked(){
   const n = godProgress(), have = n==null ? 0 : Math.min(n, GOD_NEED);
   openModal(`<h2>🔒 Tryb GOD</h2>
@@ -981,6 +1024,7 @@ function showGodLocked(){
     <ul class="rules">
       <li>najtrudniejsze plansze w grze,</li>
       <li>po zaznaczeniu cyfry <b>nie podświetlają się</b> te same cyfry na planszy,</li>
+      <li><b>tylko 1 błąd</b> – pierwsza pomyłka kończy grę,</li>
       <li><b>brak pauzy</b> – czas leci cały czas.</li>
     </ul>
     <p>${n==null
@@ -998,7 +1042,7 @@ function showGodLocked(){
 const modalBg = $('modalBg'), modal = $('modal');
 let modalOpen = false;
 function openModal(html, wire, kind){
-  modal.dataset.kind = kind || ''; modal.className = 'modal' + (kind==='keys' ? ' wide' : '');
+  modal.dataset.kind = kind || ''; modal.className = 'modal' + (kind==='keys' ? ' wide' : kind==='god' ? ' godinfo' : '');
   modal.innerHTML = html; modalBg.classList.add('show'); modalOpen = true;
   wire && wire(modal);
   const p = modal.querySelector('.primary'); p && p.focus();
@@ -1016,7 +1060,7 @@ function confirmNew(diff){
       ${Object.entries(DIFFS).map(([k,v]) => `<button data-d="${k}" class="${k===(diff||S.diff)?'primary':''}">${v.name}${k==='god' && !godUnlocked() ? ' 🔒' : ''}</button>`).join('')}
       <button data-cancel>Anuluj</button>
     </div>`, m => {
-      m.querySelectorAll('[data-d]').forEach(b => b.onclick = () => newGame(b.dataset.d));
+      m.querySelectorAll('[data-d]').forEach(b => b.onclick = () => b.dataset.d==='god' ? requestGod(true) : newGame(b.dataset.d));
       m.querySelector('[data-cancel]').onclick = () => { closeModal(); setPaused(wasPaused); };
     });
 }
@@ -1024,12 +1068,12 @@ function confirmNew(diff){
 function showGameOver(){
   openModal(`
     <h2>Koniec gry</h2>
-    <p>Popełniłeś ${MAX_MISTAKES} błędy i przegrałeś tę partię.</p>
+    <p>${maxMistakes()===1 ? 'W trybie GOD jeden błąd kończy grę.' : `Popełniłeś ${maxMistakes()} błędy i przegrałeś tę partię.`}</p>
     <div class="btns">
       <button class="primary" data-second>Druga szansa</button>
       <button data-new>Nowa gra</button>
     </div>`, m => {
-      m.querySelector('[data-second]').onclick = () => { S.over=false; S.mistakes=MAX_MISTAKES-1; save(); closeModal(); renderAll(); };
+      m.querySelector('[data-second]').onclick = () => { S.over=false; S.mistakes=maxMistakes()-1; save(); closeModal(); renderAll(); };
       m.querySelector('[data-new]').onclick = () => newGame(S.diff);
     });
 }
@@ -1132,6 +1176,7 @@ const OPTS = [
   ['limit','Limit 3 błędów','Wyłączone: grasz bez przegranej'],
   ['anim','Animacja kursora','Płynny przeskok i „oddychająca” ramka'],
   ['counts','Licznik pozostałych cyfr','Mała liczba pod cyframi 1–9'],
+  ['godInfo','Okno z zasadami trybu GOD','Pokazuj zasady przed rozpoczęciem gry GOD'],
 ];
 const FONTS = [
   ['rubik',    'Rubik',               "'Rubik'",               'klasyczna, jak sudoku.com'],
@@ -1219,7 +1264,7 @@ function sfx(kind){
 }
 function setOpt(k, v){
   SET = {...SET, [k]: v}; store.set('sudoku-settings', SET); applySettings();
-  if (k==='limit' && v && S.mistakes >= MAX_MISTAKES){ S.mistakes = MAX_MISTAKES-1; save(); }
+  if (k==='limit' && v && S.mistakes >= maxMistakes()){ S.mistakes = maxMistakes()-1; save(); }
   renderAll();
   syncSettings();
 }

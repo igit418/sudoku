@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sudoku</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@300;400;600&family=Lexend:wght@300;400;500;600&family=Nunito:wght@300;400;600&family=Rubik:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root, [data-theme="classic"]{
   --bg:#ffffff; --surface:#ffffff; --text:#344861; --muted:#94a3b7;
@@ -49,7 +49,7 @@
 }
 
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{background:var(--bg);color:var(--text);font-family:'Rubik',system-ui,sans-serif;transition:background .25s,color .25s}
+html,body{background:var(--bg);color:var(--text);font-family:var(--font,'Rubik'),system-ui,sans-serif;transition:background .25s,color .25s}
 body{min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:18px 14px 40px}
 button{font-family:inherit;color:inherit;cursor:pointer;border:none;background:none}
 
@@ -109,7 +109,7 @@ main{width:100%;max-width:960px;display:flex;gap:34px;align-items:flex-start;jus
 /* ---------- Board ---------- */
 .board-wrap{position:relative;container-type:inline-size}
 .board{display:grid;grid-template-columns:repeat(9,1fr);grid-template-rows:repeat(9,1fr);aspect-ratio:1;width:100%;border:2px solid var(--thick);background:var(--cell);user-select:none;-webkit-user-select:none;border-radius:2px;outline:none}
-.cell{position:relative;display:flex;align-items:center;justify-content:center;border-right:1px solid var(--thin);border-bottom:1px solid var(--thin);background:var(--cell);font-size:6.4cqi;font-weight:400;cursor:pointer;transition:background .12s}
+.cell{position:relative;display:flex;align-items:center;justify-content:center;border-right:1px solid var(--thin);border-bottom:1px solid var(--thin);background:var(--cell);font-size:calc(6.4cqi * var(--dscale,1));font-weight:400;cursor:pointer;transition:background .12s}
 .cell.br{border-right:2px solid var(--thick)}
 .cell.bb{border-bottom:2px solid var(--thick)}
 .cell.c8{border-right:none}
@@ -127,7 +127,7 @@ main{width:100%;max-width:960px;display:flex;gap:34px;align-items:flex-start;jus
 .cell.wave{animation:wave .6s ease}
 @keyframes wave{0%{background:var(--cell)}40%{background:var(--same)}100%{background:inherit}}
 .notes{position:absolute;inset:2px;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr)}
-.notes span{display:flex;align-items:center;justify-content:center;font-size:2.4cqi;color:var(--muted);line-height:1;border-radius:3px}
+.notes span{display:flex;align-items:center;justify-content:center;font-size:calc(2.4cqi * var(--nscale,1));color:var(--muted);line-height:1;border-radius:3px}
 .notes span.match{color:var(--accent-text);background:var(--accent);font-weight:600}
 
 /* Kursor: miękka, półprzezroczysta nakładka płynnie przeskakująca między polami */
@@ -279,6 +279,38 @@ body.no-anim .cursor{transition:opacity .18s}
 body.no-anim .cursor::after{display:none}
 body.no-counts .num small{display:none}
 body.focus .dock, body.focus .keys-btn{display:none}
+/* ---------- Czytelność ---------- */
+body.bold-given .cell .v.given{font-weight:600}
+body.contrast .cell .v.user{color:var(--accent);font-weight:500}
+body.contrast .cell .v.err{text-decoration:underline wavy;text-underline-offset:.12em;text-decoration-thickness:.06em}
+body.contrast .notes span{color:var(--text);opacity:.8}
+.fontchips{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0 18px}
+.fontchips button{padding:9px 10px;border-radius:9px;background:var(--btn);text-align:left;font-size:14px;line-height:1.25;border:2px solid transparent}
+.fontchips button small{display:block;font-size:11px;color:var(--muted);font-family:'Rubik',sans-serif}
+.fontchips button.active{border-color:var(--accent);background:var(--sel)}
+.seg{display:flex;background:var(--btn);border-radius:9px;padding:3px;gap:3px;margin:8px 0 6px}
+.seg button{flex:1;padding:7px 4px;border-radius:7px;font-size:12.5px;color:var(--muted)}
+.seg button.active{background:var(--surface);color:var(--text);font-weight:500;box-shadow:0 1px 4px var(--shadow)}
+.optrow{padding:10px 0;border-bottom:1px solid var(--thin);font-size:13.5px}
+.optrow small{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}
+.volrow{display:flex;align-items:center;gap:10px;margin-top:8px}
+.volrow input[type=range]{flex:1;accent-color:var(--accent)}
+.volrow button{padding:6px 11px;border-radius:7px;background:var(--btn);font-size:12.5px}
+.volrow button:hover{background:var(--btn-hover)}
+
+/* ---------- Tryb GOD ---------- */
+.diffbar button.god{font-weight:700;letter-spacing:.06em;background:linear-gradient(90deg,#ff3d6e,#ffb020);-webkit-background-clip:text;background-clip:text;color:transparent}
+.diffbar button.god:hover{background:linear-gradient(90deg,#ff3d6e,#ffb020);-webkit-background-clip:text;background-clip:text;color:transparent;filter:brightness(1.15)}
+.diffbar button.god.locked{background:none;color:var(--muted);-webkit-text-fill-color:var(--muted);opacity:.7;font-weight:600}
+.diffbar button.god.active{text-decoration:underline;text-decoration-color:#ff3d6e;text-underline-offset:4px}
+body.god .pausebtn{display:none}
+body.god .board{border-color:#ff3d6e;box-shadow:0 0 0 3px color-mix(in srgb,#ff3d6e 22%,transparent),0 8px 30px color-mix(in srgb,#ff3d6e 18%,transparent)}
+.godtag{display:none;font-size:11px;font-weight:700;letter-spacing:.08em;padding:3px 8px;border-radius:9px;color:#fff;background:linear-gradient(90deg,#ff3d6e,#ffb020)}
+body.god .godtag{display:inline-block}
+.godprog{height:8px;border-radius:5px;background:var(--btn);overflow:hidden;margin:4px 0 18px}
+.godprog i{display:block;height:100%;background:linear-gradient(90deg,#ff3d6e,#ffb020);border-radius:5px}
+.modal .rules{text-align:left;font-size:13.5px;line-height:1.7;margin:0 0 16px;padding-left:18px;color:var(--text)}
+
 
 /* ---------- Formularze kont (Supabase) ---------- */
 .side-body input[type=password], .side-body input[type=email]{width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--thin);background:var(--cell);color:var(--text);font-family:inherit;font-size:14px;margin-bottom:12px;outline:none}
@@ -362,7 +394,7 @@ body.focus .board{border-width:3px}
     <div class="stats">
       <div class="mistakes" id="mistakesBox">Błędy: <b id="mistakes">0/3</b></div>
       <div>Wynik: <b id="score">0</b></div>
-      <div class="timer"><b id="time">00:00</b>
+      <div class="timer"><span class="godtag" title="Tryb GOD: bez pauzy">GOD</span><b id="time">00:00</b>
         <button class="pausebtn" id="pauseBtn" title="Pauza (P)" aria-label="Pauza">
           <svg id="pauseIc" viewBox="0 0 12 12"><rect x="2" y="1" width="3" height="10" rx="1"/><rect x="7" y="1" width="3" height="10" rx="1"/></svg>
         </button>
@@ -434,6 +466,7 @@ const DIFFS = {
   expert: {name:'Ekspert', clues:24, pts:120},
   master: {name:'Mistrz', clues:22, pts:150, tries:8},
   extreme:{name:'Ekstremalny', clues:17, pts:200, tries:50, byNodes:true},
+  god:    {name:'GOD', clues:17, pts:300, tries:120, human:true, locked:true},
 };
 const THEMES = [
   {id:'classic', name:'Klasyczny', a:'#ffffff', b:'#5a7bc0'},
@@ -443,7 +476,9 @@ const THEMES = [
   {id:'violet',  name:'Fioletowy', a:'#17112b', b:'#9d7bea'},
 ];
 const MAX_MISTAKES = 3, MAX_HINTS = 3;
-const SET_DEFAULTS = {hl:true, same:true, autoClear:true, limit:true, anim:true, counts:true};
+const SET_DEFAULTS = {hl:true, same:true, autoClear:true, limit:true, anim:true, counts:true,
+  font:'rubik', size:'m', boldGiven:false, contrast:false, sound:true, volume:45};
+const GOD_NEED = 5;   // ile ukończonych gier na poziomie Ekstremalny odblokowuje GOD
 let SET = SET_DEFAULTS;
 
 /* ================= Pomocnicze ================= */
@@ -502,6 +537,36 @@ function generateOnce(target){
   }
   return {puzzle, solution, clues};
 }
+// Ile pustych pól zostaje, gdy rozwiązujemy tylko prostymi metodami (jedyna cyfra w polu /
+// jedyne miejsce w wierszu, kolumnie lub kwadracie). Im więcej zostaje, tym trudniej dla człowieka.
+function singlesLeft(puzzle){
+  const g = puzzle.slice();
+  const cand = i => { let m = 0x3FE; for (const p of PEERS[i]) if (g[p]) m &= ~(1<<g[p]); return m; };
+  const UNITS = [];
+  for (let k=0;k<9;k++){
+    UNITS.push([...Array(9).keys()].map(c => k*9+c));
+    UNITS.push([...Array(9).keys()].map(r => r*9+k));
+    UNITS.push([...Array(81).keys()].filter(i => boxOf(i)===k));
+  }
+  let progress = true;
+  while (progress){
+    progress = false;
+    for (let i=0;i<81;i++){
+      if (g[i]) continue;
+      const m = cand(i);
+      if (m && !(m & (m-1))){ g[i] = 31 - Math.clz32(m); progress = true; }
+    }
+    for (const u of UNITS){
+      for (let d=1; d<=9; d++){
+        if (u.some(i => g[i]===d)) continue;
+        const spots = u.filter(i => !g[i] && (cand(i) & (1<<d)));
+        if (spots.length===1){ g[spots[0]] = d; progress = true; }
+      }
+    }
+  }
+  return g.filter(v => !v).length;
+}
+
 function generate(diff){
   // Dla najtrudniejszych poziomów losujemy kilka plansz i bierzemy tę z najmniejszą liczbą
   // podpowiedzi, a przy remisie tę, której rozwiązanie wymaga najwięcej przeszukiwania.
@@ -510,7 +575,10 @@ function generate(diff){
   for (let t=0; t<tries; t++){
     const g = generateOnce(D.clues);
     if (tries > 1) g.nodes = solve(g.puzzle, 2, false).nodes;
-    const better = !best || (D.byNodes
+    if (D.human) g.left = singlesLeft(g.puzzle);
+    const better = !best || (D.human
+      ? (g.left > best.left || (g.left===best.left && g.nodes > best.nodes))
+      : D.byNodes
       ? (g.nodes > best.nodes || (g.nodes===best.nodes && g.clues < best.clues))
       : (g.clues < best.clues || (g.clues===best.clues && g.nodes > best.nodes)));
     if (better) best = g;
@@ -525,6 +593,7 @@ let timerId = null;
 
 function newGame(diff){
   diff = diff || (S && S.diff) || 'easy';
+  if (diff==='god' && !godUnlocked()){ showGodLocked(); return; }
   const {puzzle, solution} = generate(diff);
   S = {
     diff, puzzle, solution,
@@ -571,6 +640,7 @@ function input(d, forceNote){
     if (S.values[i]) return;
     snapshot();
     S.notes[i] ^= (1<<d);
+    sfx('note');
     afterMove(); return;
   }
   if (S.values[i] === d) return;
@@ -581,12 +651,12 @@ function input(d, forceNote){
     if (SET.autoClear) for (const p of PEERS[i]) S.notes[p] &= ~(1<<d);
     S.score += DIFFS[S.diff].pts;
     afterMove(i, true);
-    checkGroups(i);
-    checkWin();
+    if (!checkWin() && !checkGroups(i)) sfx('place');
   } else {
     S.mistakes++;
+    sfx('error');
     afterMove(i, false);
-    if (SET.limit && S.mistakes >= MAX_MISTAKES){ S.over = true; save(); accountEvent('lose'); setTimeout(showGameOver, 350); }
+    if (SET.limit && S.mistakes >= MAX_MISTAKES){ S.over = true; save(); accountEvent('lose'); setTimeout(() => sfx('lose'), 250); setTimeout(showGameOver, 350); }
   }
 }
 
@@ -596,6 +666,7 @@ function erase(){
   if (locked(i) || (!S.values[i] && !S.notes[i])) return;
   snapshot();
   S.values[i] = 0; S.notes[i] = 0;
+  sfx('erase');
   afterMove();
 }
 
@@ -622,8 +693,7 @@ function hint(){
   for (const p of PEERS[i]) S.notes[p] &= ~(1<<d);
   S.hints--;
   afterMove(i, true);
-  checkGroups(i);
-  checkWin();
+  if (!checkWin() && !checkGroups(i)) sfx('hint');
 }
 
 function toggleNotes(){
@@ -649,20 +719,24 @@ function checkGroups(i){
     [...Array(9).keys()].map(r => r*9+colOf(i)),
     [...Array(81).keys()].filter(k => boxOf(k)===boxOf(i)),
   ];
+  let done = false;
   groups.forEach(g => {
-    if (g.every(isCorrect)) g.forEach((k,n) => setTimeout(() => {
+    if (g.every(isCorrect)){ done = true; g.forEach((k,n) => setTimeout(() => {
       const el = cells[k]; el.classList.remove('wave'); void el.offsetWidth; el.classList.add('wave');
-    }, n*35));
+    }, n*35)); }
   });
+  if (done) sfx('group');
+  return done;
 }
 
 function checkWin(){
-  for (let i=0;i<81;i++) if (S.values[i] !== S.solution[i]) return;
-  S.won = true; save(); stopTimer(); accountEvent('win');
+  for (let i=0;i<81;i++) if (S.values[i] !== S.solution[i]) return false;
+  S.won = true; save(); stopTimer(); accountEvent('win'); sfx('win');
   [...Array(81).keys()].forEach(k => setTimeout(() => {
     const el = cells[k]; el.classList.remove('wave'); void el.offsetWidth; el.classList.add('wave');
   }, (rowOf(k)+colOf(k))*40));
   setTimeout(showWin, 900);
+  return true;
 }
 
 /* ================= Timer ================= */
@@ -675,8 +749,9 @@ function startTimer(){
 function stopTimer(){ if (timerId) clearInterval(timerId); timerId = null; }
 const fmt = t => { const h=(t/3600)|0, m=((t%3600)/60)|0, s=t%60; const p=n=>String(n).padStart(2,'0'); return (h?h+':':'')+p(m)+':'+p(s); };
 
-function setPaused(p){
+function setPaused(p, quiet){
   if (S.over || S.won) return;
+  if (p && S.diff==='god'){ if (!quiet) toast('W trybie GOD nie ma pauzy'); return; }
   S.paused = p; save(); renderAll();
 }
 
@@ -706,7 +781,7 @@ function renderBoard(){
     let cls = el.className.replace(/\s(sel|hl|same|conflict)\b/g,'');
     if (sel>=0){
       if (i===sel) cls += ' sel';
-      else if (SET.same && selVal && v===selVal) cls += (S.values[sel]!==S.solution[sel] ? ' conflict' : ' same');
+      else if (SET.same && S.diff!=='god' && selVal && v===selVal) cls += (S.values[sel]!==S.solution[sel] ? ' conflict' : ' same');
       else if (SET.hl && (rowOf(i)===rowOf(sel)||colOf(i)===colOf(sel)||boxOf(i)===boxOf(sel))) cls += ' hl';
     }
     el.className = cls;
@@ -718,7 +793,7 @@ function renderBoard(){
       html = '<div class="notes">';
       for (let d=1; d<=9; d++){
         const on = S.notes[i] & (1<<d);
-        html += `<span class="${on && selVal===d && isCorrect(sel) ? 'match':''}">${on?d:''}</span>`;
+        html += `<span class="${on && SET.same && S.diff!=='god' && selVal===d && isCorrect(sel) ? 'match':''}">${on?d:''}</span>`;
       }
       html += '</div>';
     }
@@ -766,7 +841,7 @@ function renderTools(){
   document.querySelectorAll('#diffbar button').forEach(b => b.classList.toggle('active', b.dataset.d===S.diff));
 }
 
-function renderAll(){ renderBoard(); renderStats(); renderTools(); }
+function renderAll(){ document.body.classList.toggle('god', S.diff==='god'); renderBoard(); renderStats(); renderTools(); }
 
 /* ================= Motywy i poziomy ================= */
 const CUSTOM_FIELDS = [
@@ -885,9 +960,38 @@ document.addEventListener('mousedown', e => { if (panelOpen && !e.target.closest
 Object.entries(DIFFS).forEach(([k,v]) => {
   const b = document.createElement('button');
   b.textContent = v.name; b.dataset.d = k;
-  b.addEventListener('click', () => confirmNew(k));
+  if (k==='god') b.classList.add('god');
+  b.addEventListener('click', () => (k==='god' && !godUnlocked()) ? showGodLocked() : confirmNew(k));
   $('diffbar').appendChild(b);
 });
+function renderDiffbar(){
+  const b = document.querySelector('#diffbar button.god'); if (!b) return;
+  const ok = godUnlocked();
+  b.classList.toggle('locked', !ok);
+  b.textContent = ok ? 'GOD' : 'GOD 🔒';
+  b.title = ok ? 'Tryb GOD – najtrudniejszy, bez pauzy' : `Odblokujesz po ${GOD_NEED} ukończonych grach na poziomie Ekstremalny`;
+}
+
+/* ================= Tryb GOD ================= */
+function showGodLocked(){
+  const n = godProgress(), have = n==null ? 0 : Math.min(n, GOD_NEED);
+  openModal(`<h2>🔒 Tryb GOD</h2>
+    <p>Najtrudniejszy poziom dla zaawansowanych graczy. Zasady:</p>
+    <ul class="rules">
+      <li>najtrudniejsze plansze w grze,</li>
+      <li>po zaznaczeniu cyfry <b>nie podświetlają się</b> te same cyfry na planszy,</li>
+      <li><b>brak pauzy</b> – czas leci cały czas.</li>
+    </ul>
+    <p>${n==null
+      ? `Odblokujesz go po <b>${GOD_NEED} ukończonych grach</b> na poziomie Ekstremalny <b>na swoim koncie</b>. Najpierw zaloguj się w menu z lewej (<b>M</b>).`
+      : `Ukończ <b>${GOD_NEED} gier</b> na poziomie Ekstremalny. Masz już <b>${have}/${GOD_NEED}</b>.`}</p>
+    <div class="godprog"><i style="width:${have/GOD_NEED*100}%"></i></div>
+    <div class="btns">${n==null ? '<button class="primary" data-login>Zaloguj się</button>' : '<button class="primary" data-ext>Zagraj na Ekstremalnym</button>'}<button data-cancel>Zamknij</button></div>`, m => {
+      m.querySelector('[data-cancel]').onclick = closeModal;
+      const l = m.querySelector('[data-login]'); l && (l.onclick = () => { closeModal(); toggleSide(true); });
+      const e = m.querySelector('[data-ext]'); e && (e.onclick = () => { closeModal(); confirmNew('extreme'); });
+    });
+}
 
 /* ================= Modale ================= */
 const modalBg = $('modalBg'), modal = $('modal');
@@ -903,12 +1007,12 @@ function closeModal(){ modalBg.classList.remove('show'); modalOpen = false; }
 function confirmNew(diff){
   const inProgress = S && !S.over && !S.won && S.values.some((v,i) => v && !isGiven(i));
   if (!inProgress){ newGame(diff); return; }
-  const wasPaused = S.paused; setPaused(true);
+  const wasPaused = S.paused; setPaused(true, true);
   openModal(`
     <h2>Rozpocząć nową grę?</h2>
     <p>Bieżący postęp zostanie utracony.</p>
     <div class="btns">
-      ${Object.entries(DIFFS).map(([k,v]) => `<button data-d="${k}" class="${k===(diff||S.diff)?'primary':''}">${v.name}</button>`).join('')}
+      ${Object.entries(DIFFS).map(([k,v]) => `<button data-d="${k}" class="${k===(diff||S.diff)?'primary':''}">${v.name}${k==='god' && !godUnlocked() ? ' 🔒' : ''}</button>`).join('')}
       <button data-cancel>Anuluj</button>
     </div>`, m => {
       m.querySelectorAll('[data-d]').forEach(b => b.onclick = () => newGame(b.dataset.d));
@@ -1008,7 +1112,7 @@ function toggleFocus(force){
   if (on) toast('Tryb skupienia · F lub Esc, aby wyjść');
 }
 
-document.addEventListener('visibilitychange', () => { if (document.hidden && S && !S.paused && !S.over && !S.won) setPaused(true); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && S && !S.paused && !S.over && !S.won) setPaused(true, true); });
 
 /* ================= Skróty pod ? ================= */
 function showKeys(){
@@ -1028,9 +1132,89 @@ const OPTS = [
   ['anim','Animacja kursora','Płynny przeskok i „oddychająca” ramka'],
   ['counts','Licznik pozostałych cyfr','Mała liczba pod cyframi 1–9'],
 ];
+const FONTS = [
+  ['rubik',    'Rubik',               "'Rubik'",               'klasyczna, jak sudoku.com'],
+  ['atkinson', 'Atkinson Hyperlegible',"'Atkinson Hyperlegible'",'najłatwiej odróżnić znaki'],
+  ['lexend',   'Lexend',              "'Lexend'",              'wygodna do czytania'],
+  ['nunito',   'Nunito',              "'Nunito'",              'miękka, zaokrąglona'],
+  ['mono',     'JetBrains Mono',      "'JetBrains Mono'",      'techniczna, równe znaki'],
+];
+const SIZES = [['s','Mała',.85,.9], ['m','Normalna',1,1], ['l','Duża',1.15,1.12], ['xl','Bardzo duża',1.3,1.22]];
+
 function applySettings(){
-  document.body.classList.toggle('no-anim', !SET.anim);
-  document.body.classList.toggle('no-counts', !SET.counts);
+  const b = document.body;
+  b.classList.toggle('no-anim', !SET.anim);
+  b.classList.toggle('no-counts', !SET.counts);
+  b.classList.toggle('bold-given', !!SET.boldGiven);
+  b.classList.toggle('contrast', !!SET.contrast);
+  const f = FONTS.find(x => x[0]===SET.font) || FONTS[0];
+  b.style.setProperty('--font', f[2]);
+  const z = SIZES.find(x => x[0]===SET.size) || SIZES[1];
+  b.style.setProperty('--dscale', z[2]); b.style.setProperty('--nscale', z[3]);
+}
+
+/* ----- Wspólny panel Opcji (motyw, czcionka, czytelność, dźwięk, gra) ----- */
+function optionsSectionHtml(){
+  const tog = ([k,l,d]) => `<label class="opt"><span>${l}<small>${d}</small></span><span class="sw"><input type="checkbox" data-opt="${k}" ${SET[k]?'checked':''}><span></span></span></label>`;
+  return `<h4>Motyw</h4><div class="themechips">${allThemes().map(t =>
+      `<button data-theme-id="${t.id}" class="${document.body.dataset.theme===t.id?'active':''}"><i style="background:linear-gradient(135deg,${t.a} 50%,${t.b} 50%)"></i>${t.name}</button>`).join('')}</div>
+    <h4>Czcionka</h4>
+    <div class="fontchips">${FONTS.map(([id,name,css,desc]) =>
+      `<button data-font="${id}" class="${SET.font===id?'active':''}" style="font-family:${css},sans-serif">${name.split(' ')[0]} 123<small>${desc}</small></button>`).join('')}</div>
+    <h4>Czytelność</h4>
+    <div class="optrow">Rozmiar cyfr<small>Dotyczy cyfr i notatek na planszy</small>
+      <div class="seg">${SIZES.map(([id,l]) => `<button data-size="${id}" class="${SET.size===id?'active':''}">${l}</button>`).join('')}</div></div>
+    ${[['boldGiven','Pogrubione cyfry startowe','Łatwiej odróżnić je od wpisanych przez Ciebie'],
+       ['contrast','Wyraźne cyfry własne','Twoje cyfry w kolorze akcentu, błędy podkreślone falką']].map(tog).join('')}
+    <h4 style="margin-top:18px">Dźwięk</h4>
+    ${tog(['sound','Dźwięki','Wpisanie cyfry, notatka, błąd, ukończony wiersz i wygrana'])}
+    <div class="optrow" style="${SET.sound?'':'opacity:.45;pointer-events:none'}">Głośność
+      <div class="volrow"><input type="range" min="5" max="100" step="5" id="volIn" value="${SET.volume}"><b id="volTxt" style="width:38px;text-align:right;font-weight:500">${SET.volume}%</b><button id="volTest">▶ Test</button></div></div>
+    <h4 style="margin-top:18px">Gra</h4>
+    ${OPTS.map(tog).join('')}
+    <p style="margin-top:14px">Ustawienia zapisują się w tej przeglądarce.</p>`;
+}
+function wireOptions(body, rerender){
+  body.querySelectorAll('[data-opt]').forEach(i => i.onchange = () => { setOpt(i.dataset.opt, i.checked); if (i.dataset.opt==='sound') { if (i.checked) sfx('place'); rerender(); } });
+  body.querySelectorAll('[data-theme-id]').forEach(b => b.onclick = () => { setTheme(b.dataset.themeId); rerender(); });
+  body.querySelectorAll('[data-font]').forEach(b => b.onclick = () => { setOpt('font', b.dataset.font); rerender(); });
+  body.querySelectorAll('[data-size]').forEach(b => b.onclick = () => { setOpt('size', b.dataset.size); rerender(); });
+  const v = body.querySelector('#volIn');
+  if (v){
+    v.oninput = () => { body.querySelector('#volTxt').textContent = v.value + '%'; SET = {...SET, volume:+v.value}; };
+    v.onchange = () => { setOpt('volume', +v.value); sfx('place'); };
+    body.querySelector('#volTest').onclick = () => { sfx('group'); };
+  }
+}
+
+/* ================= Dźwięki (syntezowane, bez plików) ================= */
+let actx = null;
+function sfx(kind){
+  if (!SET.sound) return;
+  try{
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state === 'suspended') actx.resume();
+  }catch(e){ return; }
+  const vol = (SET.volume ?? 45) / 100 * 0.35, t0 = actx.currentTime;
+  const tone = (freq, dur, type='sine', gain=1, delay=0, slide=0) => {
+    const o = actx.createOscillator(), g = actx.createGain(), t = t0 + delay;
+    o.type = type; o.frequency.setValueAtTime(freq, t);
+    if (slide) o.frequency.exponentialRampToValueAtTime(freq*slide, t+dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol*gain, t+0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+    o.connect(g).connect(actx.destination); o.start(t); o.stop(t+dur+0.02);
+  };
+  switch(kind){
+    case 'place': tone(740, .09, 'sine', .9); tone(1480, .05, 'sine', .25); break;
+    case 'note':  tone(1250, .045, 'triangle', .45); break;
+    case 'erase': tone(520, .08, 'sine', .6, 0, .6); break;
+    case 'hint':  tone(660, .1, 'sine', .7); tone(990, .14, 'sine', .7, .08); break;
+    case 'error': tone(196, .2, 'square', .35, 0, .8); tone(147, .22, 'square', .3, .07, .8); break;
+    case 'group': [880, 1109, 1319].forEach((f,i) => tone(f, .22, 'sine', .7, i*.07)); break;
+    case 'win':   [523, 659, 784, 1047, 1319].forEach((f,i) => tone(f, .35, 'triangle', .8, i*.11)); tone(1568, .6, 'sine', .5, .55); break;
+    case 'lose':  [392, 330, 262].forEach((f,i) => tone(f, .3, 'triangle', .6, i*.16)); break;
+  }
 }
 function setOpt(k, v){
   SET = {...SET, [k]: v}; store.set('sudoku-settings', SET); applySettings();
@@ -1057,6 +1241,8 @@ let accWrite = Promise.resolve();
 const configured = () => SUPABASE_URL.startsWith('https://') && SUPABASE_KEY.length > 20;
 const loggedIn = () => !!(A.session && A.account);
 const isAdmin  = () => loggedIn() && A.account.role === 'admin';
+function godProgress(){ return loggedIn() ? ((A.account.wins||{}).extreme||0) : null; }
+const godUnlocked = () => (godProgress() ?? 0) >= GOD_NEED;
 const nowIso = () => new Date().toISOString();
 
 function authErr(e){
@@ -1128,9 +1314,12 @@ function accountEvent(type){
   if (type==='start') saveAccount({ started:(a.started||0)+1, last_seen:nowIso() });
   if (type==='lose')  saveAccount({ lost:(a.lost||0)+1, last_seen:nowIso() });
   if (type==='win'){
-    const best = { ...(a.best||{}) };
+    const best = { ...(a.best||{}) }, wins = { ...(a.wins||{}) };
     if (best[S.diff]==null || S.time < best[S.diff]) best[S.diff] = S.time;
-    saveAccount({ won:(a.won||0)+1, best, points:(a.points||0)+S.score, last_seen:nowIso() });
+    wins[S.diff] = (wins[S.diff]||0) + 1;
+    saveAccount({ won:(a.won||0)+1, best, wins, points:(a.points||0)+S.score, last_seen:nowIso() });
+    if (S.diff==='extreme' && wins.extreme===GOD_NEED) setTimeout(() => toast('🔓 Odblokowałeś tryb GOD!'), 1400);
+    renderDiffbar();
   }
 }
 
@@ -1154,7 +1343,7 @@ function toggleSide(force){
   side.style.transform = '';
   side.classList.toggle('open', sideOpen);
   scrim.classList.toggle('show', sideOpen);
-  if (sideOpen && S && !S.paused && !S.over && !S.won) { setPaused(true); side.dataset.paused = '1'; }
+  if (sideOpen && S && !S.paused && !S.over && !S.won) { setPaused(true, true); side.dataset.paused = '1'; }
   if (!sideOpen && side.dataset.paused){ delete side.dataset.paused; setPaused(false); }
   if (sideOpen) renderSide();
 }
@@ -1205,6 +1394,7 @@ function renderSide(){
   $('whoSub').textContent = nick ? A.account.email + (isAdmin() ? ' · admin' : '') : 'Konto Sudoku';
   side.classList.toggle('wide', activeTab==='admin');
   if (activeTab==='admin' && isAdmin() && !A.list) loadAdminList();
+  renderDiffbar();
   renderSideBody();
 }
 
@@ -1315,11 +1505,12 @@ function adminHtml(){
       ${rows.map(a => {
         const best = a.best || {}, me = a.id===A.account.id;
         const bestTxt = Object.entries(DIFFS).filter(([k]) => best[k]!=null).map(([k,v]) => `${v.name}: ${fmt(best[k])}`).join(' · ') || 'brak rekordów';
+        const ext = (a.wins||{}).extreme||0;
         return `<tr>
           <td><b style="font-weight:500">${esc(a.nick||'—')}</b>${a.role==='admin'?'<span class="tag">Admin</span>':''}${me?'<span class="tag" style="background:var(--muted)">Ty</span>':''}
             <div class="det">od ${fmtDate(a.created_at)}<br>${bestTxt}</div></td>
           <td class="em">${esc(a.email||'—')}<div class="det">${a.confirmed ? '✓ potwierdzony' : '⏳ niepotwierdzony'}</div></td>
-          <td>${a.won||0} / ${a.started||0}<div class="det">wygr. / rozp.<br>przegr.: ${a.lost||0}</div></td>
+          <td>${a.won||0} / ${a.started||0}<div class="det">wygr. / rozp.<br>przegr.: ${a.lost||0}<br>Ekstr.: ${ext}/${GOD_NEED}${ext>=GOD_NEED?' · GOD ✓':''}</div></td>
           <td class="det">${fmtDate(a.last_seen)}</td>
           <td>${me ? '' : `<button class="neutral" data-role="${esc(a.id)}" data-to="${a.role==='admin'?'user':'admin'}">${a.role==='admin'?'Odbierz admina':'Nadaj admina'}</button>
                <button data-del="${esc(a.id)}">Usuń</button>`}</td></tr>`;
@@ -1327,12 +1518,7 @@ function adminHtml(){
 }
 
 function optionsHtml(){
-  return `<h4>Motyw</h4><div class="themechips">${allThemes().map(t =>
-      `<button data-theme-id="${t.id}" class="${document.body.dataset.theme===t.id?'active':''}"><i style="background:linear-gradient(135deg,${t.a} 50%,${t.b} 50%)"></i>${t.name}</button>`).join('')}</div>
-    <h4>Gra</h4>` +
-    OPTS.map(([k,l,d]) => `<label class="opt"><span>${l}<small>${d}</small></span><span class="sw"><input type="checkbox" data-opt="${k}" ${SET[k]?'checked':''}><span></span></span></label>`).join('') +
-    `<p style="margin-top:14px">Ustawienia zapisują się w tej przeglądarce.</p>
-     <p class="small">${link('showTerms','Regulamin')} · ${link('showPrivacy','Polityka prywatności')}</p>`;
+  return optionsSectionHtml() + `<p class="small">${link('showTerms','Regulamin')} · ${link('showPrivacy','Polityka prywatności')}</p>`;
 }
 
 function renderSideBody(){
@@ -1345,7 +1531,9 @@ function renderSideBody(){
   else if (activeTab==='account' && loggedIn()) h = accountHtml();
   else if (activeTab==='admin' && isAdmin()) h = adminHtml();
   else h = '';
+  const st = body.scrollTop;
   body.innerHTML = h;
+  if (activeTab==='options'){ wireOptions(body, renderSideBody); body.scrollTop = st; }
   wireSide(body);
 }
 
@@ -1375,8 +1563,6 @@ function showLegal(kind){
 /* ----- Obsługa przycisków ----- */
 function wireSide(body){
   const on = (id, fn) => body.querySelectorAll('#'+id).forEach(el => el.onclick = e => { e.preventDefault(); collect(body); fn(); });
-  body.querySelectorAll('[data-opt]').forEach(i => i.onchange = () => setOpt(i.dataset.opt, i.checked));
-  body.querySelectorAll('[data-theme-id]').forEach(b => b.onclick = () => { setTheme(b.dataset.themeId); renderSideBody(); });
   body.querySelectorAll('[data-eye]').forEach(b => b.onclick = () => { const i = $(b.dataset.eye); i.type = i.type==='password' ? 'text' : 'password'; });
   ['rpw','npw','apw'].forEach(id => { const i = $(id); if (i){ i.addEventListener('input', () => updateMeter(id)); updateMeter(id); } });
   on('showTerms', () => showLegal('terms'));
@@ -1537,6 +1723,7 @@ if (load()){ renderAll(); startTimer(); }
 else newGame('easy');
 board.focus();
 renderSide();
+renderDiffbar();
 initAccounts();
 })();
 </script>

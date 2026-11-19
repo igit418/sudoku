@@ -1,7 +1,11 @@
 # Sudoku
 
-Interaktywne sudoku w stylu sudoku.com: 6 poziomów trudności, notatki ołówkiem,
-timer, błędy i wynik, sterowanie klawiaturą, motywy (także własny) i tryb skupienia.
+Interaktywne sudoku w stylu sudoku.com: 6 poziomów trudności + odblokowywany tryb **GOD**,
+notatki ołówkiem, timer, błędy i wynik, sterowanie klawiaturą, motywy (także własny),
+wybór czcionki i rozmiaru cyfr, dźwięki oraz tryb skupienia.
+
+**Tryb GOD:** najtrudniejsze plansze, bez podświetlania tych samych cyfr i bez pauzy.
+Odblokowuje się po 5 ukończonych grach na poziomie Ekstremalny na swoim koncie.
 
 **Zagraj:** https://igit418.github.io/sudoku/
 

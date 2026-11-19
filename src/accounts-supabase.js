@@ -17,6 +17,8 @@ let accWrite = Promise.resolve();
 const configured = () => SUPABASE_URL.startsWith('https://') && SUPABASE_KEY.length > 20;
 const loggedIn = () => !!(A.session && A.account);
 const isAdmin  = () => loggedIn() && A.account.role === 'admin';
+function godProgress(){ return loggedIn() ? ((A.account.wins||{}).extreme||0) : null; }
+const godUnlocked = () => (godProgress() ?? 0) >= GOD_NEED;
 const nowIso = () => new Date().toISOString();
 
 function authErr(e){
@@ -88,9 +90,12 @@ function accountEvent(type){
   if (type==='start') saveAccount({ started:(a.started||0)+1, last_seen:nowIso() });
   if (type==='lose')  saveAccount({ lost:(a.lost||0)+1, last_seen:nowIso() });
   if (type==='win'){
-    const best = { ...(a.best||{}) };
+    const best = { ...(a.best||{}) }, wins = { ...(a.wins||{}) };
     if (best[S.diff]==null || S.time < best[S.diff]) best[S.diff] = S.time;
-    saveAccount({ won:(a.won||0)+1, best, points:(a.points||0)+S.score, last_seen:nowIso() });
+    wins[S.diff] = (wins[S.diff]||0) + 1;
+    saveAccount({ won:(a.won||0)+1, best, wins, points:(a.points||0)+S.score, last_seen:nowIso() });
+    if (S.diff==='extreme' && wins.extreme===GOD_NEED) setTimeout(() => toast('🔓 Odblokowałeś tryb GOD!'), 1400);
+    renderDiffbar();
   }
 }
 
@@ -114,7 +119,7 @@ function toggleSide(force){
   side.style.transform = '';
   side.classList.toggle('open', sideOpen);
   scrim.classList.toggle('show', sideOpen);
-  if (sideOpen && S && !S.paused && !S.over && !S.won) { setPaused(true); side.dataset.paused = '1'; }
+  if (sideOpen && S && !S.paused && !S.over && !S.won) { setPaused(true, true); side.dataset.paused = '1'; }
   if (!sideOpen && side.dataset.paused){ delete side.dataset.paused; setPaused(false); }
   if (sideOpen) renderSide();
 }
@@ -165,6 +170,7 @@ function renderSide(){
   $('whoSub').textContent = nick ? A.account.email + (isAdmin() ? ' · admin' : '') : 'Konto Sudoku';
   side.classList.toggle('wide', activeTab==='admin');
   if (activeTab==='admin' && isAdmin() && !A.list) loadAdminList();
+  renderDiffbar();
   renderSideBody();
 }
 
@@ -275,11 +281,12 @@ function adminHtml(){
       ${rows.map(a => {
         const best = a.best || {}, me = a.id===A.account.id;
         const bestTxt = Object.entries(DIFFS).filter(([k]) => best[k]!=null).map(([k,v]) => `${v.name}: ${fmt(best[k])}`).join(' · ') || 'brak rekordów';
+        const ext = (a.wins||{}).extreme||0;
         return `<tr>
           <td><b style="font-weight:500">${esc(a.nick||'—')}</b>${a.role==='admin'?'<span class="tag">Admin</span>':''}${me?'<span class="tag" style="background:var(--muted)">Ty</span>':''}
             <div class="det">od ${fmtDate(a.created_at)}<br>${bestTxt}</div></td>
           <td class="em">${esc(a.email||'—')}<div class="det">${a.confirmed ? '✓ potwierdzony' : '⏳ niepotwierdzony'}</div></td>
-          <td>${a.won||0} / ${a.started||0}<div class="det">wygr. / rozp.<br>przegr.: ${a.lost||0}</div></td>
+          <td>${a.won||0} / ${a.started||0}<div class="det">wygr. / rozp.<br>przegr.: ${a.lost||0}<br>Ekstr.: ${ext}/${GOD_NEED}${ext>=GOD_NEED?' · GOD ✓':''}</div></td>
           <td class="det">${fmtDate(a.last_seen)}</td>
           <td>${me ? '' : `<button class="neutral" data-role="${esc(a.id)}" data-to="${a.role==='admin'?'user':'admin'}">${a.role==='admin'?'Odbierz admina':'Nadaj admina'}</button>
                <button data-del="${esc(a.id)}">Usuń</button>`}</td></tr>`;
@@ -287,12 +294,7 @@ function adminHtml(){
 }
 
 function optionsHtml(){
-  return `<h4>Motyw</h4><div class="themechips">${allThemes().map(t =>
-      `<button data-theme-id="${t.id}" class="${document.body.dataset.theme===t.id?'active':''}"><i style="background:linear-gradient(135deg,${t.a} 50%,${t.b} 50%)"></i>${t.name}</button>`).join('')}</div>
-    <h4>Gra</h4>` +
-    OPTS.map(([k,l,d]) => `<label class="opt"><span>${l}<small>${d}</small></span><span class="sw"><input type="checkbox" data-opt="${k}" ${SET[k]?'checked':''}><span></span></span></label>`).join('') +
-    `<p style="margin-top:14px">Ustawienia zapisują się w tej przeglądarce.</p>
-     <p class="small">${link('showTerms','Regulamin')} · ${link('showPrivacy','Polityka prywatności')}</p>`;
+  return optionsSectionHtml() + `<p class="small">${link('showTerms','Regulamin')} · ${link('showPrivacy','Polityka prywatności')}</p>`;
 }
 
 function renderSideBody(){
@@ -305,7 +307,9 @@ function renderSideBody(){
   else if (activeTab==='account' && loggedIn()) h = accountHtml();
   else if (activeTab==='admin' && isAdmin()) h = adminHtml();
   else h = '';
+  const st = body.scrollTop;
   body.innerHTML = h;
+  if (activeTab==='options'){ wireOptions(body, renderSideBody); body.scrollTop = st; }
   wireSide(body);
 }
 
@@ -335,8 +339,6 @@ function showLegal(kind){
 /* ----- Obsługa przycisków ----- */
 function wireSide(body){
   const on = (id, fn) => body.querySelectorAll('#'+id).forEach(el => el.onclick = e => { e.preventDefault(); collect(body); fn(); });
-  body.querySelectorAll('[data-opt]').forEach(i => i.onchange = () => setOpt(i.dataset.opt, i.checked));
-  body.querySelectorAll('[data-theme-id]').forEach(b => b.onclick = () => { setTheme(b.dataset.themeId); renderSideBody(); });
   body.querySelectorAll('[data-eye]').forEach(b => b.onclick = () => { const i = $(b.dataset.eye); i.type = i.type==='password' ? 'text' : 'password'; });
   ['rpw','npw','apw'].forEach(id => { const i = $(id); if (i){ i.addEventListener('input', () => updateMeter(id)); updateMeter(id); } });
   on('showTerms', () => showLegal('terms'));

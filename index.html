@@ -1315,7 +1315,7 @@ function godProgress(){ return loggedIn() ? ((A.account.wins||{}).extreme||0) : 
 const accountActive = () => loggedIn();
 let settingsFor = null;
 function pushSettings(p){ if (loggedIn()) saveAccount({ settings:p }); }
-const godUnlocked = () => (godProgress() ?? 0) >= GOD_NEED;
+const godUnlocked = () => isAdmin() || (godProgress() ?? 0) >= GOD_NEED;   // admin ma GOD od razu
 const nowIso = () => new Date().toISOString();
 
 function authErr(e){

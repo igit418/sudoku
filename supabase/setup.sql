@@ -33,7 +33,7 @@ as $$
 $$;
 
 -- 3) Po rejestracji automatycznie tworzy profil.
---    Konto właściciela (rogi.kudlaty@gmail.com) od razu dostaje rolę admina.
+--    Konto właściciela (igor.kudlaty@gmail.com) od razu dostaje rolę admina.
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql security definer set search_path = public
@@ -44,7 +44,7 @@ begin
     new.id,
     lower(new.email),
     coalesce(nullif(trim(new.raw_user_meta_data->>'nick'), ''), split_part(new.email, '@', 1)),
-    case when lower(new.email) = 'rogi.kudlaty@gmail.com' then 'admin' else 'user' end,
+    case when lower(new.email) in ('igor.kudlaty@gmail.com', 'rogi.kudlaty@gmail.com') then 'admin' else 'user' end,
     case when (new.raw_user_meta_data->>'accepted_terms') = 'true' then now() else null end,
     new.email_confirmed_at is not null
   )
@@ -141,7 +141,7 @@ grant execute on function public.is_admin()                  to authenticated;
 -- 7) Jeśli założyłeś już konto przed uruchomieniem skryptu – utwórz brakujące profile
 insert into public.profiles (id, email, nick, role, confirmed)
 select u.id, lower(u.email), split_part(u.email, '@', 1),
-       case when lower(u.email) = 'rogi.kudlaty@gmail.com' then 'admin' else 'user' end,
+       case when lower(u.email) in ('igor.kudlaty@gmail.com', 'rogi.kudlaty@gmail.com') then 'admin' else 'user' end,
        u.email_confirmed_at is not null
 from auth.users u
 on conflict (id) do nothing;

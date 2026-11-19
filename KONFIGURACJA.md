@@ -8,7 +8,7 @@ Wszystko robisz w panelu **supabase.com → Twój projekt**. Nazwy menu mogą si
 2. Wklej całą zawartość pliku [`supabase/setup.sql`](supabase/setup.sql).
 3. Kliknij **Run**. Powinien pojawić się komunikat *Success. No rows returned*.
 
-Skrypt tworzy tabelę `profiles`, zabezpieczenia (każdy widzi tylko swoje konto, admin widzi wszystkie) i funkcje panelu admina. Konto **rogi.kudlaty@gmail.com** automatycznie dostaje rolę admina.
+Skrypt tworzy tabelę `profiles`, zabezpieczenia (każdy widzi tylko swoje konto, admin widzi wszystkie) i funkcje panelu admina. Konto **igor.kudlaty@gmail.com** automatycznie dostaje rolę admina.
 
 ## 2. Adresy strony
 
@@ -53,7 +53,7 @@ Oba są **publiczne** i mogą być w kodzie strony. **Nigdy nie udostępniaj** k
 
 ## 6. Pierwsze logowanie admina
 
-Wejdź na stronę → pasek z lewej (`M`) → **Zarejestruj się** adresem `rogi.kudlaty@gmail.com` → kliknij link w e-mailu → zaloguj się. Pojawi się zakładka **Panel admina**.
+Wejdź na stronę → pasek z lewej (`M`) → **Zarejestruj się** adresem `igor.kudlaty@gmail.com` → kliknij link w e-mailu → zaloguj się. Pojawi się zakładka **Panel admina**.
 
 ## Limit e-maili
 

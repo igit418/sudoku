@@ -279,6 +279,39 @@ body.no-anim .cursor{transition:opacity .18s}
 body.no-anim .cursor::after{display:none}
 body.no-counts .num small{display:none}
 body.focus .dock, body.focus .keys-btn{display:none}
+
+/* ---------- Formularze kont (Supabase) ---------- */
+.side-body input[type=password], .side-body input[type=email]{width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--thin);background:var(--cell);color:var(--text);font-family:inherit;font-size:14px;margin-bottom:12px;outline:none}
+.side-body input[type=password]:focus, .side-body input[type=email]:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)}
+.inwrap{position:relative}
+.inwrap .eye{position:absolute;right:6px;top:6px;width:30px;height:30px;border-radius:6px;font-size:14px;opacity:.55}
+.inwrap .eye:hover{opacity:1;background:var(--btn)}
+.inwrap input[type=password], .inwrap input[data-pw]{padding-right:40px}
+.pwmeter{height:5px;border-radius:3px;background:var(--thin);margin:-6px 0 5px;overflow:hidden}
+.pwmeter i{display:block;height:100%;width:0;border-radius:3px;transition:width .25s,background .25s}
+.pwmeter[data-s="1"] i{width:25%;background:var(--error)}
+.pwmeter[data-s="2"] i{width:50%;background:#e6a23c}
+.pwmeter[data-s="3"] i{width:75%;background:#67c23a}
+.pwmeter[data-s="4"] i{width:100%;background:#2f9e6e}
+.pwhint{font-size:11.5px;color:var(--muted);margin-bottom:12px}
+.check{display:flex;gap:9px;align-items:flex-start;font-size:13px;margin:4px 0 14px;cursor:pointer;line-height:1.5}
+.check input{margin-top:3px;accent-color:var(--accent);width:16px;height:16px;flex:none}
+.linkbtn{color:var(--accent);font-size:13px;padding:0;text-decoration:underline;text-underline-offset:2px}
+.linkbtn:hover{filter:brightness(1.15)}
+#sideBody > .linkbtn{display:block;margin:10px auto 0}
+.links{display:flex;flex-direction:column;align-items:center;gap:9px;margin-top:12px}
+.mailsent{text-align:center;padding:6px 0 4px}
+.mailsent .ic{width:58px;height:58px;border-radius:50%;background:var(--sel);color:var(--accent);display:grid;place-items:center;font-size:28px;margin:0 auto 12px}
+.side-body .small, .side-body p.small{font-size:12px}
+.sect{border:1px solid var(--thin);border-radius:9px;padding:10px 12px;margin-bottom:10px}
+.sect summary{cursor:pointer;font-size:13.5px;font-weight:500}
+.sect[open] summary{margin-bottom:10px}
+.sect .sbtn{margin-bottom:2px}
+.sbtn:disabled{opacity:.6;cursor:wait}
+.legal{text-align:left;font-size:13.5px;line-height:1.6;color:var(--text);max-height:56vh;overflow:auto;margin-bottom:16px}
+.legal p{margin-bottom:10px;color:var(--text)}
+.atable button.neutral{color:var(--accent);margin-bottom:4px;display:block}
+.atable button.neutral:hover{background:var(--sel)}
 /* ---------- Tryb skupienia (F) ---------- */
 body.focus{justify-content:center;padding:12px}
 body.focus header, body.focus .diffbar, body.focus .right, body.focus .pausebtn{display:none}
@@ -297,6 +330,7 @@ body.focus .board{border-width:3px}
   .num small{display:none}
 }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body data-theme="classic">
 
@@ -1004,78 +1038,116 @@ function setOpt(k, v){
   renderAll();
 }
 
-/* ================= Konta (baza strony + konto Claude) ================= */
-const A = { status:'loading', db:null, user:null, uid:null, me:null, owner:false,
-            account:null, loggedIn:false, msg:null, list:null, profiles:{}, listErr:null, q:'' };
-let accWrite = Promise.resolve();
+/* ================= Konta (Supabase) ================= */
+// Klucze projektu Supabase: Settings → API (lub Connect). Oba są publiczne – mogą być w kodzie strony,
+// bo dane chronią reguły bezpieczeństwa w bazie (RLS), a nie tajność klucza.
+const SUPABASE_URL = '';
+const SUPABASE_KEY = '';
+const SITE_URL = (location.origin && location.origin !== 'null' ? location.origin : '') + location.pathname;
 
-function saveAccount(patch){
-  if (!A.db || !A.uid || !A.account) return;
-  A.account = {...A.account, ...patch};
-  const data = JSON.parse(JSON.stringify(A.account));
-  accWrite = accWrite.then(() => A.db.doc('accounts/'+A.uid).set(data))
-    .catch(e => { A.msg = {err:true, t: writeErrText(e)}; renderSide(); });
-}
-function writeErrText(e){
-  const c = e && e.code;
-  if (c==='invalid_argument') return 'Nie masz uprawnień do zapisu. Właściciel strony musi ją Ci udostępnić z prawem edycji.';
-  if (c==='quota_exceeded') return 'Baza kont jest pełna.';
-  return 'Nie udało się zapisać. Spróbuj ponownie za chwilę.';
-}
-function accountEvent(type){
-  if (!A.loggedIn || !A.account) return;
-  const a = A.account, now = Date.now();
-  if (type==='start') saveAccount({started:(a.started||0)+1, lastSeen:now});
-  if (type==='lose')  saveAccount({lost:(a.lost||0)+1, lastSeen:now});
-  if (type==='win'){
-    const best = {...(a.best||{})};
-    if (!best[S.diff] || S.time < best[S.diff]) best[S.diff] = S.time;
-    saveAccount({won:(a.won||0)+1, best, lastSeen:now, points:(a.points||0)+S.score});
-  }
+// Parametry z linku w e-mailu (potwierdzenie konta, reset hasła, błędy) – czytamy, zanim Supabase je usunie z adresu
+const LINK = (() => {
+  const p = new URLSearchParams(location.hash.slice(1) || location.search.slice(1));
+  return { type: p.get('type'), error: p.get('error_description') || p.get('error'), code: p.get('error_code') };
+})();
+
+const A = { status:'loading', sb:null, session:null, account:null, msg:null, list:null, listErr:null, q:'',
+            view:null, pendingEmail:'', busy:false, form:{}, resendAt:0 };
+let accWrite = Promise.resolve();
+const configured = () => SUPABASE_URL.startsWith('https://') && SUPABASE_KEY.length > 20;
+const loggedIn = () => !!(A.session && A.account);
+const isAdmin  = () => loggedIn() && A.account.role === 'admin';
+const nowIso = () => new Date().toISOString();
+
+function authErr(e){
+  const c = (e && e.code) || '', m = ((e && e.message) || '').toLowerCase();
+  if (c==='invalid_credentials' || m.includes('invalid login')) return 'Nieprawidłowy e-mail lub hasło.';
+  if (c==='email_not_confirmed' || m.includes('not confirmed')) return 'Ten adres nie jest jeszcze potwierdzony. Kliknij link w e-mailu, który do Ciebie wysłaliśmy.';
+  if (c==='user_already_exists' || c==='email_exists' || m.includes('already registered')) return 'Konto z tym adresem już istnieje. Zaloguj się albo zresetuj hasło.';
+  if (c==='weak_password') return 'Hasło jest za słabe. Użyj co najmniej 8 znaków, w tym litery i cyfry.';
+  if (c==='same_password') return 'Nowe hasło musi być inne niż obecne.';
+  if (c==='over_email_send_rate_limit' || c==='over_request_rate_limit' || m.includes('rate limit')) return 'Za dużo prób w krótkim czasie. Odczekaj kilka minut i spróbuj ponownie.';
+  if (c==='email_address_invalid' || m.includes('invalid format') || m.includes('is invalid')) return 'Ten adres e-mail jest nieprawidłowy.';
+  if (m.includes('failed to fetch') || m.includes('network')) return 'Brak połączenia z serwerem kont. Sprawdź internet.';
+  return 'Coś poszło nie tak: ' + ((e && e.message) || 'nieznany błąd');
 }
 
 async function initAccounts(){
-  if (!window.claude || !window.claude.use){ A.status = 'unavailable'; renderSide(); return; }
-  const giveUp = setTimeout(() => { if (A.status==='loading'){ A.status='unavailable'; renderSide(); } }, 10000);
-  try{
-    const [db, user] = await Promise.all([claude.use('db'), claude.use('user')]);
-    if (!db || !user){ clearTimeout(giveUp); A.status='unavailable'; renderSide(); return; }
-    A.db = db; A.user = user;
-    A.uid = await user.id();
-    A.me = await user.me();
-    A.owner = !!(await user.isOwner());
-    if (!A.uid){ clearTimeout(giveUp); A.status='unavailable'; renderSide(); return; }
-    db.doc('accounts/'+A.uid).onSnapshot(snap => {
-      clearTimeout(giveUp);
-      A.account = snap.exists ? {...snap.data()} : null;
-      A.status = 'ready';
-      A.loggedIn = !!A.account && store.get('sudoku-logged') === A.uid;
-      renderSide();
-    }, () => { clearTimeout(giveUp); A.status='unavailable'; renderSide(); });
-  }catch(e){ clearTimeout(giveUp); A.status='unavailable'; renderSide(); }
+  if (!configured()){ A.status = 'unconfigured'; renderSide(); return; }
+  if (!window.supabase || !window.supabase.createClient){ A.status = 'error'; renderSide(); return; }
+  A.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: { persistSession:true, autoRefreshToken:true, detectSessionInUrl:true, flowType:'implicit' }
+  });
+
+  if (LINK.error){
+    A.msg = { err:true, t: LINK.code==='otp_expired'
+      ? 'Link z e-maila wygasł albo został już użyty. Zaloguj się lub poproś o nowy link.'
+      : 'Nie udało się użyć linku z e-maila: ' + LINK.error };
+    try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){}
+    setTimeout(() => toggleSide(true), 300);
+  }
+
+  A.sb.auth.onAuthStateChange((event, session) => {
+    A.session = session;
+    if (event === 'PASSWORD_RECOVERY'){ A.view = 'reset'; activeTab = 'login'; A.msg = null; setTimeout(() => toggleSide(true), 200); }
+    if (event === 'SIGNED_IN' && LINK.type === 'signup'){ LINK.type = null; A.view = null;
+      A.msg = { t:'Adres e-mail potwierdzony. Witaj w grze!' }; setTimeout(() => toggleSide(true), 300); }
+    if (event === 'SIGNED_IN' && LINK.type === 'email_change'){ LINK.type = null; A.msg = { t:'Nowy adres e-mail został potwierdzony.' }; }
+    if (event === 'SIGNED_OUT'){ A.account = null; A.list = null; }
+    // Wywołania Supabase poza callbackiem (zalecenie biblioteki – inaczej może się zablokować)
+    setTimeout(loadAccount, 0);
+  });
+  const { data } = await A.sb.auth.getSession();
+  A.session = data.session;
+  await loadAccount();
 }
 
-let adminSub = null;
-function startAdmin(){
-  if (adminSub || !A.db || !isAdmin()) return;
-  adminSub = A.db.collection('accounts').onSnapshot(async snap => {
-    A.list = snap.docs.map(d => ({id:d.id, ...d.data()}));
-    A.listErr = null;
-    try{ A.profiles = await A.user.profiles(A.list.map(a => a.id)) || {}; }catch(e){}
-    if (activeTab==='admin') renderSideBody();
-  }, () => { A.listErr = 'Nie udało się wczytać listy kont.'; if (activeTab==='admin') renderSideBody(); });
+let lastSeenDone = false;
+async function loadAccount(){
+  if (!A.session){ A.account = null; A.status = 'ready'; renderSide(); return; }
+  const { data, error } = await A.sb.from('profiles').select('*').eq('id', A.session.user.id).maybeSingle();
+  if (error) A.msg = { err:true, t:'Nie udało się wczytać profilu. Odśwież stronę.' };
+  A.account = data || null;
+  A.status = 'ready';
+  if (A.account && !lastSeenDone){ lastSeenDone = true; saveAccount({ last_seen: nowIso() }); }
+  renderSide();
+}
+
+function saveAccount(patch){
+  if (!A.sb || !A.account) return;
+  A.account = { ...A.account, ...patch };
+  const id = A.account.id;
+  accWrite = accWrite.then(async () => {
+    const { error } = await A.sb.from('profiles').update(patch).eq('id', id);
+    if (error){ A.msg = { err:true, t:'Nie udało się zapisać zmian na koncie.' }; renderSide(); }
+  });
+}
+function accountEvent(type){
+  if (!loggedIn()) return;
+  const a = A.account;
+  if (type==='start') saveAccount({ started:(a.started||0)+1, last_seen:nowIso() });
+  if (type==='lose')  saveAccount({ lost:(a.lost||0)+1, last_seen:nowIso() });
+  if (type==='win'){
+    const best = { ...(a.best||{}) };
+    if (best[S.diff]==null || S.time < best[S.diff]) best[S.diff] = S.time;
+    saveAccount({ won:(a.won||0)+1, best, points:(a.points||0)+S.score, last_seen:nowIso() });
+  }
+}
+
+async function loadAdminList(){
+  if (!isAdmin()) return;
+  A.listErr = null;
+  const { data, error } = await A.sb.from('profiles').select('*').order('last_seen', { ascending:false });
+  if (error) A.listErr = 'Nie udało się wczytać listy kont.';
+  else A.list = data;
+  if (activeTab==='admin') renderSideBody();
 }
 
 /* ================= Pasek boczny ================= */
 const side = $('side'), scrim = $('scrim'), dock = $('dock');
 let sideOpen = false, activeTab = 'login';
 const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const fmtDate = ms => ms ? new Date(ms).toLocaleString('pl-PL',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
-const myEmail = () => (A.me && A.me.email) || '';
-// Admin = zalogowane konto z rolą „admin”. Rolę dostaje tylko konto właściciela strony,
-// a dane wszystkich kont i tak może odczytać wyłącznie właściciel (pilnuje tego baza).
-const isAdmin = () => !!(A.owner && A.loggedIn && A.account && A.account.role==='admin');
-function stopAdmin(){ if (adminSub){ adminSub(); adminSub = null; } A.list = null; A.profiles = {}; }
+const fmtDate = v => v ? new Date(v).toLocaleString('pl-PL',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
 
 function toggleSide(force){
   sideOpen = force===undefined ? !sideOpen : force;
@@ -1114,7 +1186,7 @@ scrim.onclick = () => toggleSide(false);
 
 function tabs(){
   const t = [];
-  if (A.loggedIn) t.push(['account','Moje konto']);
+  if (loggedIn()) t.push(['account','Moje konto']);
   else { t.push(['login','Zaloguj się']); t.push(['register','Zarejestruj się']); }
   t.push(['options','Opcje']);
   if (isAdmin()) t.push(['admin','Panel admina']);
@@ -1124,189 +1196,336 @@ function renderSide(){
   const t = tabs();
   if (!t.some(x => x[0]===activeTab)) activeTab = t[0][0];
   $('sideTabs').innerHTML = t.map(([k,l]) => `<button data-tab="${k}" class="${k===activeTab?'active':''} ${k==='admin'?'admin':''}">${l}</button>`).join('');
-  $('sideTabs').querySelectorAll('button').forEach(b => b.onclick = () => { activeTab = b.dataset.tab; A.msg = null; renderSide(); });
-  const nick = A.loggedIn && A.account ? A.account.nick : '';
+  $('sideTabs').querySelectorAll('button').forEach(b => b.onclick = () => {
+    activeTab = b.dataset.tab; A.msg = null; if (A.view!=='reset') A.view = null; renderSide();
+  });
+  const nick = loggedIn() ? A.account.nick : '';
   $('avatar').textContent = nick ? nick[0].toUpperCase() : '?';
   $('who').textContent = nick || 'Niezalogowany';
-  $('whoSub').textContent = nick ? ((A.account && A.account.email) || myEmail() || 'Konto Sudoku') + (isAdmin() ? ' · admin' : '') : 'Konto Sudoku';
-  if (!isAdmin()) stopAdmin();
+  $('whoSub').textContent = nick ? A.account.email + (isAdmin() ? ' · admin' : '') : 'Konto Sudoku';
   side.classList.toggle('wide', activeTab==='admin');
-  if (activeTab==='admin' && isAdmin()) startAdmin();
+  if (activeTab==='admin' && isAdmin() && !A.list) loadAdminList();
   renderSideBody();
 }
 
-function idCard(){
-  const em = myEmail();
-  return `<div class="idcard">
-    <svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg>
-    <div><b>${em ? esc(em) : 'Twoje konto Claude'}</b>
-    <span>${em ? 'Pobrane automatycznie z konta Claude. Nie musisz nic wpisywać.' : 'Adres nie został udostępniony, ale konto i tak przypisze się do Ciebie automatycznie.'}</span></div>
-  </div>`;
-}
+/* ----- Pomocnicze formularzy ----- */
 function msgHtml(){ return A.msg ? `<div class="msg ${A.msg.err?'err':'ok'}">${esc(A.msg.t)}</div>` : ''; }
-function unavailableHtml(){
-  return A.status==='loading'
-    ? `<p>Łączenie z bazą kont…</p>`
-    : (window.claude
-        ? `<div class="msg err">Konta nie są dostępne w tym widoku.</div><p>Logowanie działa, gdy strona jest otwarta na claude.ai i jesteś zalogowany na swoje konto Claude. Gra i opcje działają normalnie.</p>`
-        : `<div class="msg">Logowanie i rejestracja są w przygotowaniu.</div><p>Wkrótce założysz tu konto e-mailem z weryfikacją. Gra, motywy i opcje działają już normalnie.</p>`);
+const F = k => esc(A.form[k] || '');
+function field(id, label, type, extra=''){
+  const pw = type==='password';
+  return `<label class="f" for="${id}">${label}</label>
+    <div class="inwrap">${`<input type="${type}" id="${id}" value="${F(id)}" ${extra}>`}${pw ? `<button type="button" class="eye" data-eye="${id}" aria-label="Pokaż hasło">👁</button>` : ''}</div>`;
+}
+function btn(id, text, cls='primary'){ return `<button class="sbtn ${cls}" id="${id}" ${A.busy?'disabled':''}>${A.busy && cls==='primary' ? 'Proszę czekać…' : text}</button>`; }
+function link(id, text){ return `<button class="linkbtn" id="${id}">${text}</button>`; }
+const validEmail = e => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e);
+function pwProblems(p){
+  const out = [];
+  if (p.length < 8) out.push('co najmniej 8 znaków');
+  if (!/[a-zA-ZąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/.test(p)) out.push('literę');
+  if (!/\d/.test(p)) out.push('cyfrę');
+  return out;
+}
+function pwMeter(id){
+  return `<div class="pwmeter" id="${id}-meter"><i></i></div><div class="pwhint" id="${id}-hint">Min. 8 znaków, litera i cyfra.</div>`;
+}
+function updateMeter(id){
+  const el = $(id); if (!el) return;
+  const p = el.value, probs = pwProblems(p);
+  let score = 0; if (p.length>=8) score++; if (p.length>=12) score++; if (/\d/.test(p) && /[a-z]/i.test(p)) score++; if (/[^a-z0-9]/i.test(p)) score++;
+  const m = $(id+'-meter'), h = $(id+'-hint');
+  m.dataset.s = p ? Math.max(1, score) : 0;
+  h.textContent = !p ? 'Min. 8 znaków, litera i cyfra.' : probs.length ? 'Brakuje: ' + probs.join(', ') + '.' : ['', 'Słabe', 'W porządku', 'Dobre', 'Bardzo dobre'][Math.max(1,score)] + ' hasło.';
+}
+function collect(body){ body.querySelectorAll('input').forEach(i => { if (i.id) A.form[i.id] = i.type==='checkbox' ? i.checked : i.value; }); }
+function fail(t){ A.msg = { err:true, t }; A.busy = false; renderSideBody(); }
+async function run(fn){ A.busy = true; renderSideBody(); try{ await fn(); } catch(e){ fail(authErr(e)); return; } A.busy = false; renderSide(); }
+
+/* ----- Widoki ----- */
+function statusHtml(){
+  if (A.status==='loading') return `<p>Łączenie z serwerem kont…</p>`;
+  if (A.status==='unconfigured') return `<div class="msg">Logowanie i rejestracja są w przygotowaniu.</div><p>Wkrótce założysz tu konto e-mailem z weryfikacją. Gra, motywy i opcje działają już normalnie.</p>`;
+  return `<div class="msg err">Nie udało się połączyć z serwerem kont.</div><p>Odśwież stronę za chwilę. Gra działa normalnie.</p>`;
+}
+
+function loginHtml(){
+  if (A.view==='reset') return `<h4>Ustaw nowe hasło</h4><p>Wpisz nowe hasło do swojego konta.</p>${msgHtml()}
+      ${field('npw','Nowe hasło','password','autocomplete="new-password"')}${pwMeter('npw')}
+      ${field('npw2','Powtórz nowe hasło','password','autocomplete="new-password"')}
+      ${btn('doReset','Zapisz nowe hasło')}`;
+  if (A.view==='forgot') return `<h4>Nie pamiętasz hasła?</h4>
+      <p>Podaj adres e-mail konta. Wyślemy na niego link do ustawienia nowego hasła.</p>${msgHtml()}
+      ${field('femail','E-mail','email','autocomplete="email" placeholder="np. jan@gmail.com"')}
+      ${btn('doForgot','Wyślij link')}${link('toLogin','← Wróć do logowania')}`;
+  return `<h4>Zaloguj się</h4>${msgHtml()}
+      ${field('lemail','E-mail','email','autocomplete="email" placeholder="np. jan@gmail.com"')}
+      ${field('lpw','Hasło','password','autocomplete="current-password"')}
+      ${btn('doLogin','Zaloguj się')}
+      ${A.showResend ? btn('doResend','Wyślij ponownie link potwierdzający','') : ''}
+      <div class="links">${link('toForgot','Nie pamiętasz hasła?')}${link('toReg','Nie masz konta? Zarejestruj się')}</div>`;
+}
+
+function registerHtml(){
+  if (A.view==='sent') return `<div class="mailsent"><div class="ic">✉</div><h4>Sprawdź skrzynkę</h4>
+      <p>Wysłaliśmy link potwierdzający na <b>${esc(A.pendingEmail)}</b>. Kliknij go, aby aktywować konto. Potem możesz się zalogować.</p>
+      <p class="small">Nie widzisz wiadomości? Sprawdź folder Spam lub Oferty. Link jest ważny przez ograniczony czas.</p></div>
+      ${msgHtml()}${btn('doResend','Wyślij link ponownie','')}${link('toLogin','Przejdź do logowania')}`;
+  return `<h4>Załóż konto</h4>
+      <p>Konto zapisuje Twoje statystyki i rekordy na każdym poziomie. Po rejestracji dostaniesz e-mail z linkiem potwierdzającym.</p>${msgHtml()}
+      ${field('remail','E-mail','email','autocomplete="email" placeholder="np. jan@gmail.com"')}
+      ${field('rnick','Nazwa gracza','text','maxlength="20" placeholder="2–20 znaków"')}
+      ${field('rpw','Hasło','password','autocomplete="new-password"')}${pwMeter('rpw')}
+      ${field('rpw2','Powtórz hasło','password','autocomplete="new-password"')}
+      <label class="check"><input type="checkbox" id="rterms" ${A.form.rterms?'checked':''}>
+        <span>Akceptuję ${link('showTerms','Regulamin')} i ${link('showPrivacy','Politykę prywatności')}.</span></label>
+      ${btn('doReg','Załóż konto')}`;
+}
+
+function accountHtml(){
+  const a = A.account, best = a.best || {};
+  return `<h4>${esc(a.nick)}${isAdmin()?' <span class="rolebadge">Admin</span>':''}</h4>
+    <p>${esc(a.email)}<br>Konto od ${fmtDate(a.created_at)}</p>${msgHtml()}
+    <div class="statgrid"><div>Rozpoczęte<b>${a.started||0}</b></div><div>Wygrane<b>${a.won||0}</b></div><div>Przegrane<b>${a.lost||0}</b></div></div>
+    <h4>Rekordy czasu</h4>
+    <table class="besttab">${Object.entries(DIFFS).map(([k,v]) => `<tr><td>${v.name}</td><td>${best[k]!=null?fmt(best[k]):'—'}</td></tr>`).join('')}</table>
+    <details class="sect"><summary>Nazwa gracza</summary>
+      ${field('anick','Nowa nazwa','text','maxlength="20"')}${btn('doNick','Zapisz nazwę','')}</details>
+    <details class="sect"><summary>Zmień hasło</summary>
+      ${field('apw','Nowe hasło','password','autocomplete="new-password"')}${pwMeter('apw')}
+      ${field('apw2','Powtórz nowe hasło','password','autocomplete="new-password"')}${btn('doPw','Zmień hasło','')}</details>
+    <details class="sect"><summary>Zmień e-mail</summary>
+      <p class="small">Wyślemy link potwierdzający na nowy adres. Zmiana zadziała po jego kliknięciu.</p>
+      ${field('aemail','Nowy e-mail','email','autocomplete="email"')}${btn('doEmail','Zmień e-mail','')}</details>
+    ${btn('doLogout','Wyloguj się','')}
+    ${link('doDeleteMe','Usuń moje konto')}`;
+}
+
+function adminHtml(){
+  if (A.listErr) return `<div class="msg err">${esc(A.listErr)}</div>${btn('doRefresh','Spróbuj ponownie','')}`;
+  if (!A.list) return `<p>Wczytywanie kont…</p>`;
+  const q = A.q.trim().toLowerCase();
+  const rows = A.list.filter(a => !q || (a.nick||'').toLowerCase().includes(q) || (a.email||'').toLowerCase().includes(q));
+  const tot = k => A.list.reduce((s,a) => s + (a[k]||0), 0);
+  return `<h4>Panel admina</h4>
+    <p>Wszystkie konta zarejestrowane na stronie. Konta niepotwierdzone to osoby, które nie kliknęły jeszcze linku z e-maila.</p>
+    ${msgHtml()}
+    <div class="asum"><div>Konta<b>${A.list.length}</b></div><div>Potwierdzone<b>${A.list.filter(a=>a.confirmed).length}</b></div><div>Gry<b>${tot('started')}</b></div><div>Wygrane<b>${tot('won')}</b></div></div>
+    <div class="asearch"><input type="text" id="aq" placeholder="Szukaj po nazwie lub e-mailu…" value="${esc(A.q)}"><button class="sbtn" id="doRefresh" style="width:auto;margin:0;padding:10px 14px">Odśwież</button></div>
+    ${rows.length ? `<table class="atable"><thead><tr><th>Gracz</th><th>E-mail</th><th>Gry</th><th>Ostatnio</th><th></th></tr></thead><tbody>
+      ${rows.map(a => {
+        const best = a.best || {}, me = a.id===A.account.id;
+        const bestTxt = Object.entries(DIFFS).filter(([k]) => best[k]!=null).map(([k,v]) => `${v.name}: ${fmt(best[k])}`).join(' · ') || 'brak rekordów';
+        return `<tr>
+          <td><b style="font-weight:500">${esc(a.nick||'—')}</b>${a.role==='admin'?'<span class="tag">Admin</span>':''}${me?'<span class="tag" style="background:var(--muted)">Ty</span>':''}
+            <div class="det">od ${fmtDate(a.created_at)}<br>${bestTxt}</div></td>
+          <td class="em">${esc(a.email||'—')}<div class="det">${a.confirmed ? '✓ potwierdzony' : '⏳ niepotwierdzony'}</div></td>
+          <td>${a.won||0} / ${a.started||0}<div class="det">wygr. / rozp.<br>przegr.: ${a.lost||0}</div></td>
+          <td class="det">${fmtDate(a.last_seen)}</td>
+          <td>${me ? '' : `<button class="neutral" data-role="${esc(a.id)}" data-to="${a.role==='admin'?'user':'admin'}">${a.role==='admin'?'Odbierz admina':'Nadaj admina'}</button>
+               <button data-del="${esc(a.id)}">Usuń</button>`}</td></tr>`;
+      }).join('')}</tbody></table>` : `<p>${A.list.length ? 'Brak wyników.' : 'Nikt jeszcze nie założył konta.'}</p>`}`;
+}
+
+function optionsHtml(){
+  return `<h4>Motyw</h4><div class="themechips">${allThemes().map(t =>
+      `<button data-theme-id="${t.id}" class="${document.body.dataset.theme===t.id?'active':''}"><i style="background:linear-gradient(135deg,${t.a} 50%,${t.b} 50%)"></i>${t.name}</button>`).join('')}</div>
+    <h4>Gra</h4>` +
+    OPTS.map(([k,l,d]) => `<label class="opt"><span>${l}<small>${d}</small></span><span class="sw"><input type="checkbox" data-opt="${k}" ${SET[k]?'checked':''}><span></span></span></label>`).join('') +
+    `<p style="margin-top:14px">Ustawienia zapisują się w tej przeglądarce.</p>
+     <p class="small">${link('showTerms','Regulamin')} · ${link('showPrivacy','Polityka prywatności')}</p>`;
 }
 
 function renderSideBody(){
   const body = $('sideBody');
-  let h = '';
-  if (activeTab==='options'){
-    h = `<h4>Motyw</h4><div class="themechips">${allThemes().map(t =>
-          `<button data-theme-id="${t.id}" class="${document.body.dataset.theme===t.id?'active':''}"><i style="background:linear-gradient(135deg,${t.a} 50%,${t.b} 50%)"></i>${t.name}</button>`).join('')}</div>
-        <h4>Gra</h4>` +
-        OPTS.map(([k,l,d]) => `<label class="opt"><span>${l}<small>${d}</small></span><span class="sw"><input type="checkbox" data-opt="${k}" ${SET[k]?'checked':''}><span></span></span></label>`).join('') +
-        `<p style="margin-top:14px">Ustawienia zapisują się w tej przeglądarce.</p>`;
-    body.innerHTML = h;
-    body.querySelectorAll('[data-opt]').forEach(i => i.onchange = () => setOpt(i.dataset.opt, i.checked));
-    body.querySelectorAll('[data-theme-id]').forEach(b => b.onclick = () => { setTheme(b.dataset.themeId); renderSideBody(); });
-    return;
-  }
-  if (A.status!=='ready'){ body.innerHTML = unavailableHtml(); return; }
-
-  if (activeTab==='login'){
-    h = `<h4>Zaloguj się</h4>
-      <p>Wpisz adres e-mail, którego użyłeś przy rejestracji.</p>
-      ${msgHtml()}
-      <label class="f">E-mail</label>
-      <input type="text" id="emailIn" inputmode="email" autocomplete="email" placeholder="np. jan@gmail.com" value="${esc(A.lastEmail || '')}">
-      <button class="sbtn primary" id="doLogin">Zaloguj się</button>
-      ${A.account ? '' : `<button class="sbtn" id="goReg">Nie mam konta – zarejestruj mnie</button>`}`;
-  }
-  else if (activeTab==='register'){
-    if (A.account){
-      h = `<h4>Zarejestruj się</h4><div class="msg ok">Masz już konto „${esc(A.account.nick)}” na ten adres.</div>
-           <button class="sbtn primary" id="doLogin">Zaloguj się</button>`;
-    } else {
-      const suggested = (myEmail().split('@')[0] || (A.me && A.me.name) || '').slice(0,20);
-      h = `<h4>Załóż konto</h4>
-        <p>Konto zapisuje Twoje statystyki: rozegrane i wygrane gry oraz rekordy czasu na każdym poziomie.</p>
-        ${msgHtml()}
-        <label class="f">E-mail</label>
-        <input type="text" id="emailIn" inputmode="email" autocomplete="email" placeholder="np. jan@gmail.com" value="${esc(A.lastEmail || myEmail())}">
-        <label class="f">Nazwa gracza</label><input type="text" id="nickIn" maxlength="20" value="${esc(suggested)}" placeholder="np. SudokuMistrz">
-        <button class="sbtn primary" id="doReg">Załóż konto</button>`;
-    }
-  }
-  else if (activeTab==='account' && A.account){
-    const a = A.account, best = a.best || {};
-    h = `<h4>${esc(a.nick)}${isAdmin()?' <span class="rolebadge">Admin</span>':''}</h4>
-      <p>${esc(a.email || myEmail())}<br>Konto od ${fmtDate(a.createdAt)}</p>
-      ${msgHtml()}
-      <div class="statgrid">
-        <div>Rozpoczęte<b>${a.started||0}</b></div><div>Wygrane<b>${a.won||0}</b></div><div>Przegrane<b>${a.lost||0}</b></div>
-      </div>
-      <h4>Rekordy czasu</h4>
-      <table class="besttab">${Object.entries(DIFFS).map(([k,v]) => `<tr><td>${v.name}</td><td>${best[k]!=null?fmt(best[k]):'—'}</td></tr>`).join('')}</table>
-      <label class="f">Nazwa gracza</label><input type="text" id="nickIn" maxlength="20" value="${esc(a.nick)}">
-      <label class="f">E-mail</label><input type="text" id="emailIn" inputmode="email" autocomplete="email" value="${esc(a.email || myEmail())}">
-      <button class="sbtn" id="doNick">Zapisz zmiany</button>
-      <button class="sbtn danger" id="doLogout">Wyloguj się</button>`;
-  }
-  else if (activeTab==='admin' && isAdmin()){
-    h = adminHtml();
-  }
+  let h;
+  if (activeTab==='options') h = optionsHtml();
+  else if (A.status!=='ready') h = statusHtml();
+  else if (activeTab==='login') h = loginHtml();
+  else if (activeTab==='register') h = registerHtml();
+  else if (activeTab==='account' && loggedIn()) h = accountHtml();
+  else if (activeTab==='admin' && isAdmin()) h = adminHtml();
+  else h = '';
   body.innerHTML = h;
   wireSide(body);
 }
 
-function adminHtml(){
-  if (A.listErr) return `<div class="msg err">${esc(A.listErr)}</div>`;
-  if (!A.list) return `<p>Wczytywanie kont…</p>`;
-  const q = A.q.trim().toLowerCase();
-  const rows = A.list
-    .map(a => { const ce = (A.profiles[a.id] && A.profiles[a.id].email) || ''; return {...a, email:a.email || ce, claudeEmail:ce}; })
-    .filter(a => !q || (a.nick||'').toLowerCase().includes(q) || a.email.toLowerCase().includes(q) || a.claudeEmail.toLowerCase().includes(q))
-    .sort((x,y) => (y.lastSeen||0) - (x.lastSeen||0));
-  const tot = k => A.list.reduce((s,a) => s + (a[k]||0), 0);
-  return `<h4>Panel admina</h4>
-    <p>Wszystkie konta zarejestrowane na tej stronie. Widzisz je tylko Ty jako właściciel.</p>
-    <div class="asum"><div>Konta<b>${A.list.length}</b></div><div>Gry<b>${tot('started')}</b></div><div>Wygrane<b>${tot('won')}</b></div><div>Przegrane<b>${tot('lost')}</b></div></div>
-    <div class="asearch"><input type="text" id="aq" placeholder="Szukaj po nazwie lub e-mailu…" value="${esc(A.q)}"></div>
-    ${rows.length ? `<table class="atable"><thead><tr><th>Gracz</th><th>E-mail</th><th>Gry</th><th>Ostatnio</th><th></th></tr></thead><tbody>
-      ${rows.map(a => {
-        const best = a.best || {};
-        const bestTxt = Object.entries(DIFFS).filter(([k]) => best[k]!=null).map(([k,v]) => `${v.name}: ${fmt(best[k])}`).join(' · ') || 'brak rekordów';
-        return `<tr>
-          <td><b style="font-weight:500">${esc(a.nick||'—')}</b>${a.role==='admin'?'<span class="tag">Admin</span>':''}${a.id===A.uid?'<span class="tag" style="background:var(--muted)">Ty</span>':''}<div class="det">od ${fmtDate(a.createdAt)}<br>${bestTxt}</div></td>
-          <td class="em">${esc(a.email || '—')}${a.claudeEmail && a.claudeEmail.toLowerCase()!==(a.email||'').toLowerCase() ? `<div class="det">konto Claude: ${esc(a.claudeEmail)}</div>` : ''}</td>
-          <td>${a.won||0} / ${a.started||0}<div class="det">wygr. / rozp.<br>przegr.: ${a.lost||0}</div></td>
-          <td class="det">${fmtDate(a.lastSeen)}</td>
-          <td>${a.id===A.uid?'':`<button data-del="${esc(a.id)}">Usuń</button>`}</td></tr>`;
-      }).join('')}</tbody></table>` : `<p>${A.list.length ? 'Brak wyników.' : 'Nikt jeszcze nie założył konta.'}</p>`}`;
+/* ----- Regulamin i polityka prywatności ----- */
+const LEGAL = {
+  terms: `<h2>Regulamin</h2><div class="legal">
+    <p><b>1. Usługa.</b> Strona udostępnia bezpłatną grę Sudoku. Konto jest dobrowolne i służy do zapisywania statystyk oraz rekordów.</p>
+    <p><b>2. Konto.</b> Do założenia konta potrzebny jest adres e-mail, nazwa gracza i hasło. Konto zaczyna działać po potwierdzeniu adresu e-mail linkiem z wiadomości.</p>
+    <p><b>3. Zasady.</b> Nie wolno używać obraźliwych nazw gracza, podszywać się pod innych ani próbować obchodzić zabezpieczeń strony. Za naruszenie tych zasad konto może zostać usunięte.</p>
+    <p><b>4. Usunięcie konta.</b> Możesz w każdej chwili usunąć swoje konto w zakładce „Moje konto”. Usuwa to wszystkie Twoje dane.</p>
+    <p><b>5. Odpowiedzialność.</b> Strona jest projektem hobbystycznym, udostępnianym „tak jak jest”, bez gwarancji ciągłego działania.</p>
+    <p><b>6. Kontakt.</b> rogi.kudlaty@gmail.com</p></div>`,
+  privacy: `<h2>Polityka prywatności</h2><div class="legal">
+    <p><b>Administrator danych:</b> właściciel strony, kontakt: rogi.kudlaty@gmail.com.</p>
+    <p><b>Jakie dane zbieramy:</b> adres e-mail, nazwę gracza, zaszyfrowane hasło (nikt, także administrator, nie widzi Twojego hasła), daty rejestracji i ostatniej wizyty oraz statystyki gier.</p>
+    <p><b>Po co:</b> wyłącznie do prowadzenia konta, logowania i pokazywania Twoich wyników (art. 6 ust. 1 lit. b RODO). Nie wysyłamy reklam i nie sprzedajemy danych.</p>
+    <p><b>Gdzie są dane:</b> w usłudze Supabase (serwery w Unii Europejskiej, jeśli projekt tak skonfigurowano). E-maile z linkami wysyła Supabase.</p>
+    <p><b>Jak długo:</b> do czasu usunięcia konta.</p>
+    <p><b>Twoje prawa:</b> wgląd w dane, ich poprawienie, usunięcie (przycisk „Usuń moje konto”), ograniczenie przetwarzania, przeniesienie danych oraz skarga do Prezesa UODO.</p>
+    <p><b>Przeglądarka:</b> strona zapisuje w pamięci przeglądarki ustawienia gry, motyw i stan bieżącej partii, a po zalogowaniu także sesję logowania. Nie używamy plików cookie do śledzenia.</p></div>`,
+};
+function showLegal(kind){
+  openModal(`${LEGAL[kind]}<div class="btns"><button class="primary" data-cancel>Zamknij</button></div>`,
+    m => m.querySelector('[data-cancel]').onclick = closeModal, 'keys');
 }
 
-function readEmail(body){
-  const inp = body.querySelector('#emailIn');
-  const em = (inp && inp.value || '').trim().toLowerCase();
-  A.lastEmail = em;
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(em)){
-    A.msg = {err:true, t: em ? 'To nie wygląda na poprawny adres e-mail.' : 'Wpisz adres e-mail.'}; renderSideBody();
-    const n = $('sideBody').querySelector('#emailIn'); n && n.focus();
-    return null;
-  }
-  return em;
-}
+/* ----- Obsługa przycisków ----- */
 function wireSide(body){
-  const on = (id, fn) => { const el = body.querySelector('#'+id); el && (el.onclick = fn); };
-  on('goReg', () => { activeTab='register'; A.msg=null; renderSide(); });
+  const on = (id, fn) => body.querySelectorAll('#'+id).forEach(el => el.onclick = e => { e.preventDefault(); collect(body); fn(); });
+  body.querySelectorAll('[data-opt]').forEach(i => i.onchange = () => setOpt(i.dataset.opt, i.checked));
+  body.querySelectorAll('[data-theme-id]').forEach(b => b.onclick = () => { setTheme(b.dataset.themeId); renderSideBody(); });
+  body.querySelectorAll('[data-eye]').forEach(b => b.onclick = () => { const i = $(b.dataset.eye); i.type = i.type==='password' ? 'text' : 'password'; });
+  ['rpw','npw','apw'].forEach(id => { const i = $(id); if (i){ i.addEventListener('input', () => updateMeter(id)); updateMeter(id); } });
+  on('showTerms', () => showLegal('terms'));
+  on('showPrivacy', () => showLegal('privacy'));
+  on('toForgot', () => { A.view = 'forgot'; A.msg = null; A.form.femail = A.form.lemail || ''; renderSideBody(); });
+  on('toLogin',  () => { A.view = null; A.msg = null; activeTab = 'login'; renderSide(); });
+  on('toReg',    () => { A.view = null; A.msg = null; activeTab = 'register'; renderSide(); });
+
   on('doLogin', () => {
-    const inp = body.querySelector('#emailIn');
-    if (inp){
-      const em = readEmail(body); if (em===null) return;
-      if (!A.account){ A.msg = {err:true, t:'Nie ma jeszcze konta dla tego adresu. Najpierw się zarejestruj.'}; renderSideBody(); return; }
-      const stored = (A.account.email || myEmail()).toLowerCase();
-      if (stored && em !== stored){ A.msg = {err:true, t:'Ten e-mail nie pasuje do Twojego konta. Sprawdź, czy nie ma literówki.'}; renderSideBody(); return; }
-      if (!A.account.email) saveAccount({email:em});
-    }
-    if (!A.account){ A.msg = {err:true, t:'Nie ma jeszcze konta dla tego adresu. Najpierw się zarejestruj.'}; renderSideBody(); return; }
-    A.loggedIn = true; store.set('sudoku-logged', A.uid); A.msg = null;
-    saveAccount(A.owner && A.account.role!=='admin' ? {lastSeen:Date.now(), role:'admin'} : {lastSeen:Date.now()});
-    activeTab = 'account'; renderSide(); toast('Zalogowano: '+A.account.nick);
+    const email = (A.form.lemail||'').trim().toLowerCase(), pw = A.form.lpw || '';
+    if (!validEmail(email)) return fail('Wpisz poprawny adres e-mail.');
+    if (!pw) return fail('Wpisz hasło.');
+    A.showResend = false;
+    run(async () => {
+      const { error } = await A.sb.auth.signInWithPassword({ email, password: pw });
+      if (error){
+        if (error.code==='email_not_confirmed' || /not confirmed/i.test(error.message)){ A.showResend = true; A.pendingEmail = email; }
+        throw error;
+      }
+      A.form = {}; A.msg = null; activeTab = 'account';
+      toast('Zalogowano');
+    });
   });
-  on('doReg', async () => {
-    const email = readEmail(body); if (email===null) return;
-    const nick = (body.querySelector('#nickIn').value||'').trim();
-    if (nick.length < 2){ A.msg = {err:true, t:'Nazwa gracza musi mieć co najmniej 2 znaki.'}; renderSideBody(); return; }
-    const now = Date.now();
-    const acc = {nick, email, role: A.owner ? 'admin' : 'user', createdAt:now, lastSeen:now, started:0, won:0, lost:0, points:0, best:{}};
-    try{
-      await A.db.doc('accounts/'+A.uid).set(acc);
-      A.account = acc; A.loggedIn = true; store.set('sudoku-logged', A.uid); A.msg = null;
-      activeTab = 'account'; renderSide(); toast('Konto założone. Witaj, '+nick+'!');
-    }catch(e){ A.msg = {err:true, t:writeErrText(e)}; renderSideBody(); }
+
+  on('doReg', () => {
+    const email = (A.form.remail||'').trim().toLowerCase(), nick = (A.form.rnick||'').trim(), pw = A.form.rpw||'', pw2 = A.form.rpw2||'';
+    if (!validEmail(email)) return fail('Wpisz poprawny adres e-mail.');
+    if (nick.length < 2 || nick.length > 20) return fail('Nazwa gracza musi mieć od 2 do 20 znaków.');
+    const probs = pwProblems(pw); if (probs.length) return fail('Hasło musi zawierać: ' + probs.join(', ') + '.');
+    if (pw !== pw2) return fail('Hasła nie są takie same.');
+    if (!A.form.rterms) return fail('Aby założyć konto, zaakceptuj Regulamin i Politykę prywatności.');
+    run(async () => {
+      const { data, error } = await A.sb.auth.signUp({ email, password: pw,
+        options: { emailRedirectTo: SITE_URL, data: { nick, accepted_terms: true } } });
+      if (error) throw error;
+      if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0)
+        throw { code:'user_already_exists' };
+      A.pendingEmail = email; A.form = {}; A.msg = null; A.resendAt = Date.now();
+      if (data.session){ activeTab = 'account'; toast('Konto założone'); }   // gdy potwierdzanie e-maila jest wyłączone
+      else A.view = 'sent';
+    });
   });
+
+  on('doResend', () => {
+    const wait = Math.ceil((A.resendAt + 60000 - Date.now())/1000);
+    if (wait > 0) return fail(`Kolejny e-mail możesz wysłać za ${wait} s.`);
+    run(async () => {
+      const { error } = await A.sb.auth.resend({ type:'signup', email:A.pendingEmail, options:{ emailRedirectTo: SITE_URL } });
+      if (error) throw error;
+      A.resendAt = Date.now(); A.msg = { t:'Wysłaliśmy link ponownie na ' + A.pendingEmail + '.' };
+    });
+  });
+
+  on('doForgot', () => {
+    const email = (A.form.femail||'').trim().toLowerCase();
+    if (!validEmail(email)) return fail('Wpisz poprawny adres e-mail.');
+    run(async () => {
+      const { error } = await A.sb.auth.resetPasswordForEmail(email, { redirectTo: SITE_URL });
+      if (error) throw error;
+      A.msg = { t:'Jeśli istnieje konto z adresem ' + email + ', wysłaliśmy na nie link do zmiany hasła.' };
+    });
+  });
+
+  on('doReset', () => {
+    const pw = A.form.npw||'', pw2 = A.form.npw2||'';
+    const probs = pwProblems(pw); if (probs.length) return fail('Hasło musi zawierać: ' + probs.join(', ') + '.');
+    if (pw !== pw2) return fail('Hasła nie są takie same.');
+    run(async () => {
+      const { error } = await A.sb.auth.updateUser({ password: pw });
+      if (error) throw error;
+      A.view = null; A.form = {}; A.msg = { t:'Hasło zostało zmienione. Jesteś zalogowany.' }; activeTab = 'account';
+    });
+  });
+
   on('doNick', () => {
-    const email = readEmail(body); if (email===null) return;
-    const nick = (body.querySelector('#nickIn').value||'').trim();
-    if (nick.length < 2){ A.msg = {err:true, t:'Nazwa gracza musi mieć co najmniej 2 znaki.'}; renderSideBody(); return; }
-    saveAccount({nick, email}); A.msg = {t:'Zapisano zmiany.'}; renderSide();
+    const nick = (A.form.anick||'').trim();
+    if (nick.length < 2 || nick.length > 20) return fail('Nazwa gracza musi mieć od 2 do 20 znaków.');
+    saveAccount({ nick }); A.form.anick = ''; A.msg = { t:'Zapisano nową nazwę.' }; renderSide();
   });
-  on('doLogout', () => {
-    A.loggedIn = false; try{ localStorage.removeItem('sudoku-logged'); }catch(e){}
-    A.msg = null; activeTab = 'login'; renderSide(); toast('Wylogowano');
+
+  on('doPw', () => {
+    const pw = A.form.apw||'', pw2 = A.form.apw2||'';
+    const probs = pwProblems(pw); if (probs.length) return fail('Hasło musi zawierać: ' + probs.join(', ') + '.');
+    if (pw !== pw2) return fail('Hasła nie są takie same.');
+    run(async () => {
+      const { error } = await A.sb.auth.updateUser({ password: pw });
+      if (error) throw error;
+      A.form.apw = A.form.apw2 = ''; A.msg = { t:'Hasło zostało zmienione.' };
+    });
   });
-  body.querySelectorAll('input[type=text]:not(#aq)').forEach(i => i.addEventListener('keydown', e => {
-    if (e.key==='Enter'){ const b = body.querySelector('#doLogin,#doReg,#doNick'); b && b.click(); }
+
+  on('doEmail', () => {
+    const email = (A.form.aemail||'').trim().toLowerCase();
+    if (!validEmail(email)) return fail('Wpisz poprawny adres e-mail.');
+    if (email === A.account.email) return fail('To jest Twój obecny adres.');
+    run(async () => {
+      const { error } = await A.sb.auth.updateUser({ email }, { emailRedirectTo: SITE_URL });
+      if (error) throw error;
+      A.form.aemail = ''; A.msg = { t:'Wysłaliśmy link potwierdzający na ' + email + '. Kliknij go, aby zakończyć zmianę.' };
+    });
+  });
+
+  on('doLogout', () => run(async () => {
+    await A.sb.auth.signOut(); A.account = null; A.session = null; A.list = null; lastSeenDone = false;
+    A.msg = null; activeTab = 'login'; toast('Wylogowano');
   }));
+
+  on('doDeleteMe', () => openModal(`<h2>Usunąć konto?</h2>
+      <p>Twoje konto, statystyki i rekordy zostaną usunięte na zawsze. Tego nie da się cofnąć.</p>
+      <div class="btns"><button class="primary" data-yes style="background:var(--error)">Usuń moje konto</button><button data-cancel>Anuluj</button></div>`, m => {
+      m.querySelector('[data-cancel]').onclick = closeModal;
+      m.querySelector('[data-yes]').onclick = async () => {
+        closeModal();
+        const { error } = await A.sb.rpc('delete_own_account');
+        if (error){ A.msg = { err:true, t:'Nie udało się usunąć konta.' }; renderSide(); return; }
+        await A.sb.auth.signOut(); A.account = null; A.session = null; activeTab = 'login';
+        A.msg = { t:'Konto zostało usunięte.' }; renderSide();
+      };
+    }));
+
+  on('doRefresh', () => { A.list = null; renderSideBody(); loadAdminList(); });
   const aq = body.querySelector('#aq');
-  if (aq){ aq.oninput = () => { A.q = aq.value; const pos = aq.selectionStart; renderSideBody(); const n = $('sideBody').querySelector('#aq'); n.focus(); n.setSelectionRange(pos,pos); }; }
+  if (aq){ aq.oninput = () => { A.q = aq.value; const pos = aq.selectionStart; renderSideBody(); const n = $('aq'); n.focus(); n.setSelectionRange(pos,pos); }; }
+  body.querySelectorAll('[data-role]').forEach(b => b.onclick = async () => {
+    const { error } = await A.sb.rpc('admin_set_role', { target:b.dataset.role, new_role:b.dataset.to });
+    A.msg = error ? { err:true, t:'Nie udało się zmienić roli.' } : { t: b.dataset.to==='admin' ? 'Nadano rolę admina.' : 'Odebrano rolę admina.' };
+    loadAdminList();
+  });
   body.querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
     const a = A.list.find(x => x.id===b.dataset.del);
-    openModal(`<h2>Usunąć konto?</h2><p>Konto „${esc(a && a.nick)}” i jego statystyki zostaną usunięte na zawsze.</p>
-      <div class="btns"><button class="primary" data-yes>Usuń konto</button><button data-cancel>Anuluj</button></div>`, m => {
+    openModal(`<h2>Usunąć konto?</h2><p>Konto „${esc(a && a.nick)}” (${esc(a && a.email)}) i jego statystyki zostaną usunięte na zawsze.</p>
+      <div class="btns"><button class="primary" data-yes style="background:var(--error)">Usuń konto</button><button data-cancel>Anuluj</button></div>`, m => {
+        m.querySelector('[data-cancel]').onclick = closeModal;
         m.querySelector('[data-yes]').onclick = async () => {
           closeModal();
-          try{ await A.db.doc('accounts/'+b.dataset.del).delete(); toast('Usunięto konto'); }
-          catch(e){ toast('Nie udało się usunąć konta'); }
+          const { error } = await A.sb.rpc('admin_delete_user', { target:b.dataset.del });
+          A.msg = error ? { err:true, t:'Nie udało się usunąć konta.' } : { t:'Konto zostało usunięte.' };
+          loadAdminList();
         };
-        m.querySelector('[data-cancel]').onclick = closeModal;
       });
   });
+
+  // Enter wysyła formularz
+  body.querySelectorAll('input:not(#aq):not([type=checkbox])').forEach(i => i.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    const sect = i.closest('details');
+    const b = (sect && sect.querySelector('.sbtn')) || body.querySelector('#doLogin,#doReg,#doForgot,#doReset');
+    b && b.click();
+  }));
 }
 
 /* ================= Start ================= */

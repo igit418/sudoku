@@ -23,6 +23,17 @@ timer, błędy i wynik, sterowanie klawiaturą, motywy (także własny) i tryb s
 | M | menu boczne |
 | ? | lista skrótów |
 
-## W przygotowaniu
+## Konta graczy
 
-Konta graczy (rejestracja e-mailem z weryfikacją) i panel admina na Supabase.
+Rejestracja e-mailem i hasłem z potwierdzeniem przez link, logowanie, reset i zmiana hasła,
+zmiana e-maila, usuwanie konta oraz panel admina – na [Supabase](https://supabase.com).
+Konfiguracja: [KONFIGURACJA.md](KONFIGURACJA.md).
+
+## Pliki
+
+| Plik | Co to |
+|---|---|
+| `index.html` | cała gra (jeden plik) |
+| `src/accounts-supabase.js` | moduł kont – źródło, wklejony do `index.html` |
+| `supabase/setup.sql` | skrypt bazy danych do wklejenia w SQL Editor |
+| `supabase/email-templates/` | polskie szablony e-maili |
